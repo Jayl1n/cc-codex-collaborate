@@ -1,6 +1,6 @@
 ---
 name: cc-codex-collaborate
-version: 0.1.3
+version: 0.1.4
 description: Coordinate Claude Code and Codex in a milestone-based collaboration loop. Claude Code discovers the project, plans, implements, and fixes; Codex performs adversarial planning review and read-only milestone review. Working documents are stored under docs/cccc.
 argument-hint: "[task description]"
 ---
@@ -220,10 +220,54 @@ If no known subcommand is provided, treat the arguments as the user's coding tas
 ## Role separation
 
 - Claude Code: project discovery, language detection, planning, self-review, implementation, tests, fixes, state management, human-facing communication.
-- Codex: independent read-only reviewer, adversarial planning challenger, milestone reviewer, next-milestone critic.
+- Codex: independent read-only reviewer, adversarial planning challenger, milestone reviewer, next-milestone critic, final reviewer.
 - Human: ambiguous requirements, product decisions, security decisions, secrets, production operations, real money, irreversible actions.
 
 Codex must not directly modify files. Codex reviews using context and returns structured JSON.
+
+## Mandatory Codex Gates
+
+**This is a P0 invariant. Codex review is NEVER optional.**
+
+Rules:
+
+1. Claude Code MUST NOT begin implementation until Codex adversarial plan review has passed.
+2. Claude Code MUST NOT mark a milestone as passed until Codex milestone review has passed.
+3. Claude Code MUST NOT mark the whole task as completed until Codex final review has passed.
+4. If Codex is unavailable, misconfigured, fails to run, or returns invalid JSON, Claude Code MUST pause with status `PAUSED_FOR_CODEX`.
+5. Claude Code MUST NOT silently skip Codex review, even for trivial tasks.
+6. For trivial tasks, Claude may use a lightweight plan and milestone, but Codex review is still required.
+7. Self-checks such as cat, tests, lint, or build are NOT a substitute for Codex review.
+8. A milestone can only be marked passed if there is a valid Codex review artifact with `status = pass` for that milestone and review round.
+9. If no Codex review artifact exists, the only valid next action is to run Codex review or pause if Codex is unavailable.
+10. Any final summary must mention the Codex review file used to approve the milestone.
+
+**Invariants (memorize these):**
+
+```text
+No Codex plan review, no implementation.
+No Codex milestone review, no milestone pass.
+No Codex final review, no task completion.
+Codex unavailable means pause, not skip.
+```
+
+**Before implementation:**
+
+- Run `.claude/skills/cc-codex-collaborate/scripts/cccc-codex-check.sh` to verify Codex availability.
+- Run `.claude/skills/cc-codex-collaborate/scripts/cccc-assert-codex-gates.py assert-plan-approved` to verify plan approval.
+- If assertion fails, you MUST pause with `status = PAUSED_FOR_CODEX`.
+
+**Before marking milestone passed:**
+
+- Run `cccc-assert-codex-gates.py assert-milestone-approved`.
+- If assertion fails, run `cccc-codex-milestone-review.sh` and wait for result.
+- If review fails, fix and re-review. Do NOT skip.
+
+**Before marking task DONE:**
+
+- Run `cccc-assert-codex-gates.py assert-final-approved`.
+- If assertion fails, run `cccc-codex-final-review.sh`.
+- Only proceed to DONE if final review passes.
 
 ## User language rule
 

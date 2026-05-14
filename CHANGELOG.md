@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.1.4 - 2026-05-15
+
+### Added
+
+- **Mandatory Codex Gates** — P0 invariant: Codex review is NEVER optional.
+  - No Codex plan review, no implementation.
+  - No Codex milestone review, no milestone pass.
+  - No Codex final review, no task completion.
+  - Codex unavailable means pause, not skip.
+- `cccc-codex-check.sh` — Check Codex CLI availability before reviews.
+- `cccc-assert-codex-gates.py` — Assert gate conditions before proceeding (assert-plan-approved, assert-milestone-approved, assert-final-approved).
+- `cccc-codex-final-review.sh` — Run final review before task completion.
+- State fields for Codex gates: `codex_plan_review_status`, `codex_final_review_status`, `last_codex_*_review_file`, `codex_unavailable_reason`, `current_milestone_codex_review_status`.
+- Config fields for Codex enforcement: `codex.enabled`, `codex.required`, `codex.fail_closed`, `codex.cli_command`, `require_plan_review_before_implementation`, `require_milestone_review_before_pass`, `require_final_review_before_done`.
+- Context bundle now includes untracked file contents preview (safe small text files only).
+
+### Changed
+
+- `cccc-codex-plan-review.sh` now checks Codex availability, updates state with review status, and pauses if Codex fails.
+- `cccc-codex-milestone-review.sh` now checks Codex availability, updates milestone review status, and pauses if Codex fails.
+- `cccc-build-context.sh` now includes untracked files preview (limited to 200 lines, 20KB per file, excludes secrets/binary).
+- SKILL.md updated with "Mandatory Codex Gates" section and strict invariants.
+- Version bumped to 0.1.4.
+
+### Fixed
+
+- **P0**: Milestones were being marked passed without Codex review. Now enforced via gate assertions and state tracking.
+
 ## 0.1.3 - 2026-05-14
 
 ### Added

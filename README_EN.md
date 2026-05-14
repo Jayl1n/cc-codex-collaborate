@@ -42,6 +42,29 @@ Turns a coding task into a controlled collaboration loop:
 | **Context first** | No Codex planning without `context-bundle.md` |
 | **Review before code** | No implementation without self-review + adversarial review |
 | **Safety gates** | Secrets, money, production, and destructive ops cannot auto-continue |
+| **Codex gates** | Codex review is mandatory, must pass before proceeding |
+
+## Mandatory Codex Gates (P0 Rule)
+
+**Codex review is NEVER optional.**
+
+Required rules:
+
+1. No Codex plan review passed, no implementation may start
+2. No Codex milestone review passed, no milestone may be marked complete
+3. No Codex final review passed, no task may be marked DONE
+4. If Codex is unavailable, fails, or returns invalid JSON, must pause (status `PAUSED_FOR_CODEX`)
+5. Even for trivial tasks, Codex review must be performed
+6. Self-checks (cat, tests, lint, build) are NOT a substitute for Codex review
+
+Invariants:
+
+```text
+No Codex plan review, no implementation.
+No Codex milestone review, no milestone pass.
+No Codex final review, no task completion.
+Codex unavailable means pause, not skip.
+```
 
 ## First-time setup
 

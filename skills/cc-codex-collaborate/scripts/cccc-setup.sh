@@ -56,7 +56,7 @@ cccc_init_dirs
 preset_recommended() {
   cat <<'JSON'
 {
-  "version": "0.1.3",
+  "version": "0.1.4",
   "language": {"user_language": "auto", "auto_detect": true},
   "workspace": {"root": "docs/cccc", "commit_planning_docs": true, "ignore_logs_and_runtime": true},
   "mode": "supervised-auto",
@@ -88,7 +88,18 @@ preset_recommended() {
     "pause_on_real_money": true,
     "pause_on_destructive_commands": true
   },
-  "codex": {"sandbox": "read-only", "require_context_bundle": true, "allow_direct_repo_inspection": true}
+  "codex": {
+    "enabled": true,
+    "required": true,
+    "fail_closed": true,
+    "cli_command": "codex",
+    "sandbox": "read-only",
+    "require_context_bundle": true,
+    "allow_direct_repo_inspection": true,
+    "require_plan_review_before_implementation": true,
+    "require_milestone_review_before_pass": true,
+    "require_final_review_before_done": true
+  }
 }
 JSON
 }
@@ -96,7 +107,7 @@ JSON
 preset_strict() {
   cat <<'JSON'
 {
-  "version": "0.1.3",
+  "version": "0.1.4",
   "language": {"user_language": "auto", "auto_detect": true},
   "workspace": {"root": "docs/cccc", "commit_planning_docs": true, "ignore_logs_and_runtime": true},
   "mode": "supervised-auto",
@@ -128,7 +139,18 @@ preset_strict() {
     "pause_on_real_money": true,
     "pause_on_destructive_commands": true
   },
-  "codex": {"sandbox": "read-only", "require_context_bundle": true, "allow_direct_repo_inspection": true}
+  "codex": {
+    "enabled": true,
+    "required": true,
+    "fail_closed": true,
+    "cli_command": "codex",
+    "sandbox": "read-only",
+    "require_context_bundle": true,
+    "allow_direct_repo_inspection": true,
+    "require_plan_review_before_implementation": true,
+    "require_milestone_review_before_pass": true,
+    "require_final_review_before_done": true
+  }
 }
 JSON
 }

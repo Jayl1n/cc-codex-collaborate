@@ -42,8 +42,15 @@
     "pause_on_destructive_commands": true
   },
   "codex": {
+    "enabled": true,
+    "required": true,
+    "fail_closed": true,
+    "cli_command": "codex",
     "sandbox": "read-only",
     "require_context_bundle": true,
-    "allow_direct_repo_inspection": true
+    "allow_direct_repo_inspection": true,
+    "require_plan_review_before_implementation": true,
+    "require_milestone_review_before_pass": true,
+    "require_final_review_before_done": true
   }
 }
