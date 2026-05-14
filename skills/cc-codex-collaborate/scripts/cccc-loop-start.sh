@@ -56,7 +56,7 @@ add_hook('StopFailure', '', '${CLAUDE_PROJECT_DIR}/.claude/hooks/cccc-stop-failu
 settings_path.write_text(json.dumps(settings, ensure_ascii=False, indent=2) + '\n')
 PY
 
-# Update config.json: enable loop
+# Update config.json: enable loop, set mode
 if [[ -f "$CONFIG" ]]; then
   python3 - <<'PY'
 import json
@@ -64,12 +64,13 @@ from pathlib import Path
 p = Path('docs/cccc/config.json')
 data = json.loads(p.read_text())
 data.setdefault('automation', {})['stop_hook_loop_enabled'] = True
+data.setdefault('automation', {}).setdefault('max_stop_hook_continuations', 10)
 data['mode'] = 'full-auto-safe'
 p.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
 PY
 fi
 
-# Update state.json
+# Update state.json: runtime fields only, remove mode if present
 python3 - <<'PY'
 import json
 from pathlib import Path
@@ -78,15 +79,14 @@ try:
     state = json.loads(state_path.read_text())
 except Exception:
     state = {}
-state['enabled'] = True
-state['mode'] = 'full-auto-safe'
-state['pause_reason'] = None
 state['stop_hook_continuations'] = 0
+state.pop('mode', None)
 state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + '\n')
 PY
 
 echo "Enabled cc-codex-collaborate loop automation."
 echo "Installed hooks into .claude/hooks and registered them in .claude/settings.json."
+echo "Updated docs/cccc/config.json: mode = full-auto-safe"
 echo "Updated docs/cccc/config.json: automation.stop_hook_loop_enabled = true"
-echo "Updated docs/cccc/state.json: mode = full-auto-safe"
+echo "Updated docs/cccc/state.json: stop_hook_continuations = 0"
 if [[ -f "$BACKUP" ]]; then echo "Backup: $BACKUP"; fi

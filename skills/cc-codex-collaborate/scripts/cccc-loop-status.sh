@@ -122,7 +122,7 @@ if [[ -f "$STATE" ]]; then
   echo "  status: $(json_value "$STATE" '.status' 'unknown')"
   echo "  current_milestone: $(json_value "$STATE" '.current_milestone_id' 'none')"
   echo "  pause_reason: $(json_value "$STATE" '.pause_reason' '')"
-  echo "  enabled: $(json_value "$STATE" '.enabled' 'false')"
+  echo "  stop_hook_continuations: $(json_value "$STATE" '.stop_hook_continuations' '0')"
 else
   echo "State file: MISSING ($STATE)"
 fi

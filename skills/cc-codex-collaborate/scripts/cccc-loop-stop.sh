@@ -60,7 +60,7 @@ p.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
 PY
 fi
 
-# Update state.json
+# Update state.json: runtime fields only, remove mode if present
 if [[ -f "$STATE" ]]; then
   python3 - <<'PY'
 import json
@@ -70,17 +70,18 @@ try:
     state = json.loads(p.read_text())
 except Exception:
     state = {}
-state['mode'] = 'supervised-auto'
-state['enabled'] = False
 state['pause_reason'] = 'Loop stopped by user.'
 state['stop_hook_continuations'] = 0
+state.pop('mode', None)
+state.pop('enabled', None)
 p.write_text(json.dumps(state, ensure_ascii=False, indent=2) + '\n')
 PY
 fi
 
 echo "Disabled cc-codex-collaborate loop automation."
 echo "Removed cccc hook registrations from .claude/settings.json."
+echo "Updated docs/cccc/config.json: mode = supervised-auto"
 echo "Updated docs/cccc/config.json: automation.stop_hook_loop_enabled = false"
-echo "Updated docs/cccc/state.json: mode = supervised-auto"
+echo "Updated docs/cccc/state.json: stop_hook_continuations = 0"
 if [[ -f "$BACKUP" ]]; then echo "Backup: $BACKUP"; fi
 echo "Hook script files under .claude/hooks are left in place, but no longer registered."
