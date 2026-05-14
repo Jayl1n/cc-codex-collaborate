@@ -11,6 +11,6 @@ Execute:
 .claude/skills/cc-codex-collaborate/scripts/cccc-loop-stop.sh
 ```
 
-This command removes cccc hook registrations from `.claude/settings.json` without deleting unrelated user hooks. It sets `docs/cccc/state.json` back to manual/supervised mode.
+This command removes cccc hook registrations from `.claude/settings.json` without deleting unrelated user hooks. It sets `docs/cccc/config.json` `automation.stop_hook_loop_enabled` to `false` and reverts `docs/cccc/state.json` to `supervised-auto` mode.
 
 After running it, summarize what changed in the user's primary language.

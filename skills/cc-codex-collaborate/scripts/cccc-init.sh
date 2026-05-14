@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# Initialize docs/cccc workspace from templates.
+# Called internally by cccc-setup.sh and other scripts.
+# Does not overwrite existing files. Reads language from config.json.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
@@ -8,13 +11,11 @@ ROOT="$(cccc_repo_root)"
 cd "$ROOT"
 cccc_init_dirs
 
-TASK="${*:-}"
-LANGUAGE="$($SCRIPT_DIR/cccc-detect-language.sh "$TASK")"
 NOW="$(cccc_now)"
 SKILL_DIR="$(cccc_skill_dir)"
 TEMPLATE_DIR="$SKILL_DIR/templates/cccc"
 
-# Generate docs/cccc from templates on first run. Existing files are never overwritten.
+# Generate docs/cccc markdown files from templates. Never overwrite.
 for file in project-brief project-map current-state architecture test-strategy roadmap milestone-backlog decision-log risk-register open-questions context-bundle README; do
   target="docs/cccc/${file}.md"
   template="$TEMPLATE_DIR/${file}.template.md"
@@ -33,6 +34,28 @@ EOF2
   fi
 done
 
+# Generate config.json if missing (fallback; normally created by cccc-setup.sh)
+if [[ ! -f docs/cccc/config.json ]]; then
+  if [[ -f "$TEMPLATE_DIR/config.template.json" ]]; then
+    cp "$TEMPLATE_DIR/config.template.json" docs/cccc/config.json
+  else
+    echo '{}' > docs/cccc/config.json
+  fi
+fi
+
+# Read language from config.json
+LANGUAGE="$(python3 - <<'PY'
+import json
+try:
+    data = json.loads(open('docs/cccc/config.json').read())
+    lang = data.get('language', {}).get('user_language', 'auto')
+    print(lang)
+except Exception:
+    print('auto')
+PY
+)"
+
+# Generate state.json if missing; preserve all existing fields
 if [[ ! -f docs/cccc/state.json ]]; then
   if [[ -f "$TEMPLATE_DIR/state.template.json" ]]; then
     cp "$TEMPLATE_DIR/state.template.json" docs/cccc/state.json
@@ -41,7 +64,8 @@ if [[ ! -f docs/cccc/state.json ]]; then
   fi
 fi
 
-CCCC_TASK="$TASK" CCCC_LANGUAGE="$LANGUAGE" CCCC_NOW="$NOW" python3 - <<'PY'
+# Update state.json: only runtime fields
+CCCC_LANGUAGE="$LANGUAGE" CCCC_NOW="$NOW" python3 - <<'PY'
 import json, pathlib, os
 p = pathlib.Path('docs/cccc/state.json')
 try:
@@ -49,28 +73,13 @@ try:
 except Exception:
     data = {}
 
-existing_language = data.get('user_language')
-existing_source = data.get('language_source')
-
-data.update({
-    'skill_name': 'cc-codex-collaborate',
-    'skill_version': '0.1.2',
-    'workspace': 'docs/cccc',
-    'task': os.environ.get('CCCC_TASK', ''),
-    'enabled': True,
-    'status': 'DISCOVERING_PROJECT',
-    'updated_at': os.environ.get('CCCC_NOW', ''),
-})
-
-if existing_language:
-    data['user_language'] = existing_language
-    data['language_source'] = existing_source or 'preserved_from_previous_session'
-else:
-    data['user_language'] = os.environ.get('CCCC_LANGUAGE', 'unknown')
-    data['language_source'] = 'inferred_from_latest_user_message'
-
-data.setdefault('mode', 'supervised-auto')
-data.setdefault('created_at', os.environ.get('CCCC_NOW', ''))
+# Only set runtime status fields, never overwrite language from config
+data.setdefault('skill_name', 'cc-codex-collaborate')
+data.setdefault('skill_version', '0.1.3')
+data.setdefault('workspace', 'docs/cccc')
+data.setdefault('task', '')
+data.setdefault('enabled', False)
+data.setdefault('status', 'NOT_INITIALIZED')
 data.setdefault('project_context_status', 'not_ready')
 data.setdefault('roadmap_status', 'not_reviewed')
 data.setdefault('current_milestone_id', None)
@@ -79,25 +88,28 @@ data.setdefault('blocked_milestones', [])
 data.setdefault('known_risks', [])
 data.setdefault('pause_reason', None)
 data.setdefault('stop_hook_continuations', 0)
-data.setdefault('thresholds', {
-    'max_plan_review_rounds': 3,
-    'max_milestones_per_run': 5,
-    'max_review_rounds_per_milestone': 3,
-    'max_fix_attempts_per_milestone': 3,
-    'max_stop_hook_continuations': 10,
-    'max_context_refresh_rounds': 3,
-    'max_diff_lines_per_milestone': 1200,
-    'max_changed_files_per_milestone': 20,
-    'on_max_review_exceeded': 'pause'
-})
+data.setdefault('review_round_current', 0)
+data.setdefault('fix_attempts_current', 0)
+data.setdefault('last_context_update', None)
+data.setdefault('mode', 'supervised-auto')
+data.setdefault('created_at', os.environ.get('CCCC_NOW', ''))
+
+data['updated_at'] = os.environ.get('CCCC_NOW', '')
+
+# Language: prefer existing, then config, then default
+existing_language = data.get('user_language')
+if not existing_language or existing_language == 'unknown':
+    from_config = os.environ.get('CCCC_LANGUAGE', 'auto')
+    if from_config and from_config != 'auto':
+        data['user_language'] = from_config
+        data['language_source'] = 'from_config'
+
 p.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
 PY
 
 cat > docs/cccc/runtime/last-init.txt <<EOF2
 Initialized at: $NOW
 User language: $LANGUAGE
-Task: $TASK
 EOF2
 
 echo "Initialized cc-codex-collaborate workspace at docs/cccc"
-echo "User language: $LANGUAGE"

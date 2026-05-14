@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.1.3 - 2026-05-14
+
+### Added
+
+- Interactive setup wizard with three configuration presets: recommended, strict, custom.
+- `docs/cccc/config.json` for project-level configuration (mode, thresholds, language, safety, automation, codex behavior).
+- Configuration presets: Quick (recommended), Strict (high-risk), Custom (step-by-step).
+- Existing config detection: setup asks whether to keep, update, backup-and-rebuild, or exit.
+- Config backup on rebuild: `docs/cccc/backups/config.<timestamp>.json`.
+- `cccc_config_value()` helper in `cccc-common.sh` for reading config values.
+- `docs/cccc/backups/` directory in workspace layout.
+
+### Changed
+
+- `docs/cccc/state.json` now only stores runtime state (milestone, status, review counts, pause reason). All thresholds moved to `config.json`.
+- Setup is now an interactive wizard, not a silent bootstrap. It detects language, offers presets, and summarizes.
+- Loop scripts (`loop-start`, `loop-stop`, `loop-status`) now read from `config.json` instead of `state.json`.
+- `loop-stop` updates `config.json` (disables `automation.stop_hook_loop_enabled`, reverts mode to `supervised-auto`).
+- `loop-start` updates `config.json` (enables loop, sets mode to `full-auto-safe`).
+- Removed public `init` subcommand. Setup is the sole entry point; init is internal only.
+- `cccc-init.sh` preserves existing `user_language` instead of overwriting on re-init.
+- Version bumped to 0.1.3.
+
+### Removed
+
+- Public `/cc-codex-collaborate init` subcommand.
+- Thresholds from `state.json` (now in `config.json`).
+
 ## 0.1.2 - 2026-05-14
 
 ### Changed

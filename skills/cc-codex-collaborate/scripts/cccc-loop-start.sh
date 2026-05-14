@@ -7,6 +7,8 @@ ROOT="$(cccc_repo_root)"
 cd "$ROOT"
 SKILL_DIR="$(cccc_skill_dir)"
 SETTINGS=".claude/settings.json"
+CONFIG="docs/cccc/config.json"
+STATE="docs/cccc/state.json"
 BACKUP=".claude/settings.json.cccc-backup-$(date -u +%Y%m%dT%H%M%SZ)"
 
 mkdir -p .claude/hooks docs/cccc/runtime
@@ -15,10 +17,12 @@ cp "$SKILL_DIR/hooks/cccc-stop.sh" .claude/hooks/cccc-stop.sh
 cp "$SKILL_DIR/hooks/cccc-stop-failure.sh" .claude/hooks/cccc-stop-failure.sh
 chmod +x .claude/hooks/cccc-*.sh
 
+# Ensure workspace exists
 if [[ ! -f docs/cccc/state.json ]]; then
-  "$SCRIPT_DIR/cccc-init.sh" ""
+  "$SCRIPT_DIR/cccc-init.sh"
 fi
 
+# Backup and update settings.json
 if [[ -f "$SETTINGS" ]]; then
   cp "$SETTINGS" "$BACKUP"
 else
@@ -50,7 +54,25 @@ add_hook('PreToolUse', 'Bash|Edit|Write|MultiEdit', '${CLAUDE_PROJECT_DIR}/.clau
 add_hook('Stop', '', '${CLAUDE_PROJECT_DIR}/.claude/hooks/cccc-stop.sh')
 add_hook('StopFailure', '', '${CLAUDE_PROJECT_DIR}/.claude/hooks/cccc-stop-failure.sh')
 settings_path.write_text(json.dumps(settings, ensure_ascii=False, indent=2) + '\n')
+PY
 
+# Update config.json: enable loop
+if [[ -f "$CONFIG" ]]; then
+  python3 - <<'PY'
+import json
+from pathlib import Path
+p = Path('docs/cccc/config.json')
+data = json.loads(p.read_text())
+data.setdefault('automation', {})['stop_hook_loop_enabled'] = True
+data['mode'] = 'full-auto-safe'
+p.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+PY
+fi
+
+# Update state.json
+python3 - <<'PY'
+import json
+from pathlib import Path
 state_path = Path('docs/cccc/state.json')
 try:
     state = json.loads(state_path.read_text())
@@ -65,4 +87,6 @@ PY
 
 echo "Enabled cc-codex-collaborate loop automation."
 echo "Installed hooks into .claude/hooks and registered them in .claude/settings.json."
+echo "Updated docs/cccc/config.json: automation.stop_hook_loop_enabled = true"
+echo "Updated docs/cccc/state.json: mode = full-auto-safe"
 if [[ -f "$BACKUP" ]]; then echo "Backup: $BACKUP"; fi

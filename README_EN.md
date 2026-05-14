@@ -1,7 +1,7 @@
 # CCCC — Claude Code × Codex Collaboration Engine
 
 <p align="center">
-  <strong>Version</strong> 0.1.2 &nbsp;|&nbsp; <strong>Short name</strong> CCCC &nbsp;|&nbsp; <strong>License</strong> MIT
+  <strong>Version</strong> 0.1.3 &nbsp;|&nbsp; <strong>Short name</strong> CCCC &nbsp;|&nbsp; <strong>License</strong> MIT
 </p>
 
 <p align="center">
@@ -43,27 +43,88 @@ Turns a coding task into a controlled collaboration loop:
 | **Review before code** | No implementation without self-review + adversarial review |
 | **Safety gates** | Secrets, money, production, and destructive ops cannot auto-continue |
 
+## First-time setup
+
+```text
+/cc-codex-collaborate setup
+```
+
+Setup is an interactive configuration wizard that:
+
+1. Detects the user's primary language
+2. Presents configuration presets (recommended / strict / custom)
+3. Generates the `docs/cccc/` workspace
+4. Creates `docs/cccc/config.json` (project configuration)
+5. Creates `docs/cccc/state.json` (runtime state)
+6. Generates `.claude/commands/` shortcut commands
+7. Does **not** enable hooks or start any task
+
+Configuration presets:
+
+| Preset | Use case | Highlights |
+| --- | --- | --- |
+| **A. Quick setup** | Most projects (recommended) | 3 review rounds, 1200 diff lines, P1 blocks |
+| **B. Strict setup** | High-risk projects | 4 review rounds, 600 diff lines, P2 also blocks |
+| **C. Custom** | Step-by-step config | Language, mode, granularity, review thresholds, automation |
+
+## Start a task
+
+```text
+/cc-codex-collaborate "your task description"
+```
+
+This is a free-form natural language task description, not a fixed task name. For example:
+
+```text
+/cc-codex-collaborate "add email verification to the user module"
+/cc-codex-collaborate "refactor the auth middleware to use JWT"
+```
+
+## config.json vs state.json
+
+| File | Purpose | When modified |
+| --- | --- | --- |
+| `docs/cccc/config.json` | Project-level config: mode, thresholds, language, safety, automation | During setup or manual edit |
+| `docs/cccc/state.json` | Runtime state: current milestone, status, review rounds, pause reason | Updated automatically each run |
+
+`config.json` stores:
+- Language settings (`language`)
+- Collaboration mode (`mode`)
+- Planning review thresholds (`planning`)
+- Milestone granularity (`milestones`)
+- Review thresholds (`review`)
+- Automation settings (`automation`)
+- Safety policies (`safety`)
+- Codex behavior (`codex`)
+
+`state.json` only stores runtime data:
+- Current milestone, status, review round counts
+- Pause reason, completed/blocked milestones
+- Loop continuation count, last context update
+
 ## Runtime workspace
 
-`docs/cccc` is generated automatically on first use — no manual setup needed.
+`docs/cccc` is generated automatically by setup — no manual creation needed.
 
 ```
 docs/cccc/
-  state.json              # Runtime state
-  project-brief.md        # Project brief
-  project-map.md          # Project map
-  current-state.md        # Current state snapshot
+  config.json              # Project configuration
+  state.json               # Runtime state
+  project-brief.md         # Project brief
+  project-map.md           # Project map
+  current-state.md         # Current state snapshot
   architecture.md         # Architecture overview
-  test-strategy.md        # Test strategy
+  test-strategy.md         # Test strategy
   roadmap.md              # Roadmap
   milestone-backlog.md    # Milestone backlog
   decision-log.md         # Decision log
-  risk-register.md        # Risk register
-  open-questions.md       # Open questions
-  context-bundle.md       # Context summary (input for Codex reviews)
-  reviews/                # Review records
-  logs/                   # Runtime logs
-  runtime/                # Runtime temporary files
+  risk-register.md         # Risk register
+  open-questions.md        # Open questions
+  context-bundle.md        # Context summary (input for Codex reviews)
+  reviews/                 # Review records
+  logs/                    # Runtime logs
+  runtime/                 # Runtime temporary files
+  backups/                 # Config backups
 ```
 
 Templates live in `.claude/skills/cc-codex-collaborate/templates/cccc/`.
@@ -84,42 +145,13 @@ The release zip does not include the following runtime directories — they are 
 docs/cccc/
 ```
 
-## Quick start
-
-### 1. First-time setup
-
-```text
-/cc-codex-collaborate setup
-```
-
-Setup generates or verifies the following:
-
-```
-.claude/commands/
-  cc-codex-collaborate-loop-status.md
-  cc-codex-collaborate-loop-start.md
-  cc-codex-collaborate-loop-stop.md
-
-docs/cccc/
-  state.json, project-brief.md, project-map.md, ...
-  reviews/, logs/, runtime/
-```
-
-Setup **does not overwrite** existing files and **does not enable** hooks. After completion, it reports what was generated, what was preserved, hook status, and basic usage.
-
-### 2. Run a task
-
-```text
-/cc-codex-collaborate "your task description"
-```
-
 ## Command reference
 
 ### Main commands
 
 ```text
 /cc-codex-collaborate <task>       Start the full collaboration loop
-/cc-codex-collaborate setup        First-time initialization (workspace + project discovery)
+/cc-codex-collaborate setup        Interactive configuration wizard (first-time entry point)
 /cc-codex-collaborate plan         Generate/update the plan
 /cc-codex-collaborate plan-review  Trigger plan review
 /cc-codex-collaborate run          Run the current milestone
@@ -130,11 +162,9 @@ Setup **does not overwrite** existing files and **does not enable** hooks. After
 
 ### Loop automation commands
 
-After setup, these shortcut commands are available:
-
 | Command | Purpose |
 | --- | --- |
-| `/cc-codex-collaborate-loop-status` | Show `docs/cccc` status, loop mode, and hook configuration |
+| `/cc-codex-collaborate-loop-status` | Show config/state status, loop mode, and hook configuration |
 | `/cc-codex-collaborate-loop-start` | Enable Stop-hook auto-continuation (`full-auto-safe` mode) |
 | `/cc-codex-collaborate-loop-stop` | Disable loop automation and remove CCCC hook registrations |
 
@@ -173,9 +203,10 @@ When clarification is needed, the skill uses a brainstorming-style gate:
 ```gitignore
 docs/cccc/logs/
 docs/cccc/runtime/
+docs/cccc/backups/
 ```
 
-You may commit `docs/cccc/*.md` to preserve planning and review history.
+You may commit `docs/cccc/*.md` and `docs/cccc/config.json` to preserve configuration and review history. `state.json` can be excluded since it's runtime state.
 
 ---
 

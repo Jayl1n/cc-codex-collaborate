@@ -7,6 +7,7 @@ ROOT="$(cccc_repo_root)"
 cd "$ROOT"
 SETTINGS=".claude/settings.json"
 STATE="docs/cccc/state.json"
+CONFIG="docs/cccc/config.json"
 BACKUP=".claude/settings.json.cccc-backup-$(date -u +%Y%m%dT%H%M%SZ)"
 
 if [[ -f "$SETTINGS" ]]; then
@@ -44,6 +45,22 @@ settings_path.write_text(json.dumps(settings, ensure_ascii=False, indent=2) + '\
 PY
 fi
 
+# Update config.json: disable loop
+if [[ -f "$CONFIG" ]]; then
+  python3 - <<'PY'
+import json
+from pathlib import Path
+p = Path('docs/cccc/config.json')
+data = json.loads(p.read_text())
+data.setdefault('automation', {})['stop_hook_loop_enabled'] = False
+# Revert mode to supervised-auto if it was full-auto-safe
+if data.get('mode') == 'full-auto-safe':
+    data['mode'] = 'supervised-auto'
+p.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n')
+PY
+fi
+
+# Update state.json
 if [[ -f "$STATE" ]]; then
   python3 - <<'PY'
 import json
@@ -62,5 +79,8 @@ PY
 fi
 
 echo "Disabled cc-codex-collaborate loop automation."
+echo "Removed cccc hook registrations from .claude/settings.json."
+echo "Updated docs/cccc/config.json: automation.stop_hook_loop_enabled = false"
+echo "Updated docs/cccc/state.json: mode = supervised-auto"
 if [[ -f "$BACKUP" ]]; then echo "Backup: $BACKUP"; fi
 echo "Hook script files under .claude/hooks are left in place, but no longer registered."

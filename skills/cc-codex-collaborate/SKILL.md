@@ -1,6 +1,6 @@
 ---
 name: cc-codex-collaborate
-version: 0.1.2
+version: 0.1.3
 description: Coordinate Claude Code and Codex in a milestone-based collaboration loop. Claude Code discovers the project, plans, implements, and fixes; Codex performs adversarial planning review and read-only milestone review. Working documents are stored under docs/cccc.
 argument-hint: "[task description]"
 ---
@@ -27,27 +27,159 @@ The first user-facing action after installation should be:
 /cc-codex-collaborate setup
 ```
 
-When invoked with `setup`, do not start project implementation. Run:
+Setup is an **interactive configuration wizard** conducted by Claude Code (you). It does NOT start any task, does NOT enable hooks, and does NOT modify `.claude/settings.json`.
+
+### Setup wizard flow
+
+When invoked with `setup`, you must conduct the interactive wizard in the user's primary language. Follow this flow:
+
+#### 1. Detect user language
+
+Detect the user's primary language from:
+1. Explicit user preference
+2. The language of the current message
+3. If unclear, default to the language of the most recent user message
+
+#### 2. Opening message
+
+Display in the user's language:
+
+> I will initialize cc-codex-collaborate for this project. This generates `.claude/commands` and `docs/cccc`, but does not enable hooks or start any task.
+
+#### 3. Handle existing config first
+
+If `docs/cccc/config.json` already exists, ask the user before proceeding:
+
+> A. Keep existing config, only fill missing files
+> B. Interactively update parts of the config
+> C. Backup and rebuild config
+> D. Exit
+
+If C is chosen, backup to `docs/cccc/backups/config.<timestamp>.json` before proceeding.
+
+If A is chosen, run `cccc-setup.sh keep [language]` and skip the preset selection.
+
+#### 4. Ask configuration mode (only if no existing config, or user chose B/C)
+
+Present choices using `AskUserQuestion`:
+
+> A. Quick setup: recommended defaults for most projects (recommended)
+> B. Strict setup: stronger review, smaller milestones, easier to pause
+> C. Custom setup: configure thresholds and behavior step by step
+> D. Import config: from existing `docs/cccc/config.json` or template
+> E. Exit setup
+
+Default: A.
+
+#### 5. Preset details
+
+**A. Quick / recommended preset:**
+- mode: supervised-auto
+- max_plan_review_rounds: 3
+- max_milestones_per_run: 5, max_diff_lines: 1200, max_changed_files: 20
+- max_review_rounds_per_milestone: 3, max_fix_attempts: 3
+- block_on_p0: true, block_on_p1: true, allow_continue_with_p2: true
+- stop_hook_loop_enabled: false
+
+**B. Strict preset:**
+- mode: supervised-auto
+- max_plan_review_rounds: 4
+- max_milestones_per_run: 3, max_diff_lines: 600, max_changed_files: 10
+- max_review_rounds_per_milestone: 4, max_fix_attempts: 2
+- block_on_p0: true, block_on_p1: true, allow_continue_with_p2: false
+- stop_hook_loop_enabled: false
+
+**C. Custom setup — ask these questions one at a time:**
+
+1. **User language**: A. Auto detect (recommended) B. 简体中文 C. English D. Other
+2. **Collaboration mode**: A. manual B. supervised-auto (recommended) C. full-auto-safe D. Custom
+3. **Planning review strength**: A. Standard (recommended) B. Strict (4 rounds) C. Very strict (5 rounds, ask on any uncertainty) D. Custom
+4. **Milestone granularity**: A. Small steps (600 diff, 10 files) B. Standard (1200 diff, 20 files) (recommended) C. Large steps (2500 diff, 40 files) D. Custom
+5. **Review thresholds**: max review rounds (default 3), max fix attempts (default 3), block P1 (default yes), allow P2 (default yes)
+6. **Auto loop**: A. Not enabled (recommended) B. Decide later C. Enable now (warning: changes Claude Code stop behavior)
+
+If the user chooses "Enable now" for auto loop, warn that stop-hook will change Claude Code's stop behavior, and ask for explicit confirmation before modifying `.claude/settings.json`. Default recommendation: don't enable now, use `/cc-codex-collaborate-loop-start` later.
+
+**D. Import**: Use existing `docs/cccc/config.json` as-is, or use recommended defaults if no config found.
+
+#### 6. Execute setup script
+
+After gathering the user's choices, build the config and run:
 
 ```bash
-.claude/skills/cc-codex-collaborate/scripts/cccc-setup.sh
+# For quick/strict presets:
+.claude/skills/cc-codex-collaborate/scripts/cccc-setup.sh recommended [language]
+.claude/skills/cc-codex-collaborate/scripts/cccc-setup.sh strict [language]
+
+# For custom config, write JSON to a temp file and pipe it:
+cat /tmp/cccc-custom-config.json | .claude/skills/cc-codex-collaborate/scripts/cccc-setup.sh custom [language]
+
+# For import/keep:
+.claude/skills/cc-codex-collaborate/scripts/cccc-setup.sh import [language]
+.claude/skills/cc-codex-collaborate/scripts/cccc-setup.sh keep [language]
 ```
 
-The setup command must:
+#### 7. Setup summary
 
-1. Generate `.claude/commands/` shortcut commands from `.claude/skills/cc-codex-collaborate/templates/commands/`.
-2. Generate or verify the `docs/cccc/` runtime workspace from templates.
-3. Preserve existing files and avoid overwriting user modifications.
-4. Not enable hooks or Stop-hook automation.
-5. Report to the user, in their primary language, exactly what was generated or preserved.
-6. Show simple usage examples.
+After the script completes, output a summary in the user's language:
+
+- List generated files
+- List preserved files (not overwritten)
+- List what was NOT enabled (hooks, settings.json)
+- Show current configuration (mode, language, review rounds, diff lines, file limit, sensitive ops policy)
+- Show next steps:
+  - Start a task: `/cc-codex-collaborate "your free-form task description"`
+  - Check loop status: `/cc-codex-collaborate-loop-status`
+  - Enable auto-continuation: `/cc-codex-collaborate-loop-start`
 
 Setup should explain:
 
 - generated command files
-- generated `docs/cccc` files
+- generated `docs/cccc` files (including config.json and state.json)
 - that hooks were not enabled
 - that loop automation can be enabled later with `/cc-codex-collaborate-loop-start`
+- current configuration summary (mode, language, thresholds)
+
+## Configuration presets
+
+Setup offers three configuration presets:
+
+### A. Recommended (default)
+
+Standard settings for most projects: `supervised-auto` mode, 3 review rounds, 1200 diff lines, 20 files per milestone, P1 blocks, P2 allowed.
+
+### B. Strict
+
+For high-risk projects: 4 review rounds, 600 diff lines, 10 files, 4 review rounds per milestone, 2 fix attempts, P2 also blocks.
+
+### C. Custom
+
+Step-by-step configuration of: language, mode, planning review strength, milestone granularity, review thresholds, and auto-loop behavior.
+
+## Config vs State
+
+`docs/cccc/config.json` is the project-level configuration. It stores:
+
+- language settings
+- collaboration mode
+- planning thresholds
+- milestone granularity
+- review thresholds
+- automation settings
+- safety policies
+- codex behavior
+
+`docs/cccc/state.json` is runtime state only:
+
+- current milestone
+- current status
+- review round counts
+- pause reason
+- completed/blocked milestones
+- last context update
+- loop continuation count
+
+All planning, review, and milestone thresholds must read from `config.json`. If `config.json` does not exist, prompt the user to run setup first.
 
 ## Command bootstrap model
 
@@ -57,34 +189,33 @@ The zip includes only the skill, scripts, prompts, schemas, hooks templates, and
 
 Runtime generation rules:
 
-- `/cc-codex-collaborate setup` generates `.claude/commands/` and `docs/cccc/`.
-- `/cc-codex-collaborate-loop-start` generates `.claude/hooks/` and updates `.claude/settings.json`.
-- `/cc-codex-collaborate-loop-stop` removes only this skill's hook registrations.
+- `/cc-codex-collaborate setup` generates `.claude/commands/` and `docs/cccc/` (including config.json and state.json). It does NOT generate `.claude/hooks/` or modify `.claude/settings.json`.
+- `/cc-codex-collaborate-loop-start` generates `.claude/hooks/`, updates `.claude/settings.json`, sets `config.json` `automation.stop_hook_loop_enabled` to `true`, and sets `state.json` mode to `full-auto-safe`.
+- `/cc-codex-collaborate-loop-stop` removes only this skill's hook registrations from `.claude/settings.json`, sets `config.json` `automation.stop_hook_loop_enabled` to `false`, and reverts `state.json` mode to `supervised-auto`.
 
 ## Loop control commands
 
 After setup, this package provides three explicit slash-command wrappers for loop automation:
 
-- `/cc-codex-collaborate-loop-status`: inspect `docs/cccc/state.json`, hook files, and `.claude/settings.json` hook registrations.
-- `/cc-codex-collaborate-loop-start`: enable full-auto-safe loop continuation by installing cccc hook scripts into `.claude/hooks`, registering them in `.claude/settings.json`, and setting `docs/cccc/state.json` mode to `full-auto-safe`.
-- `/cc-codex-collaborate-loop-stop`: disable loop automation by removing only cccc hook registrations from `.claude/settings.json` and returning state to supervised/manual mode.
+- `/cc-codex-collaborate-loop-status`: inspect `docs/cccc/config.json`, `docs/cccc/state.json`, hook files, and `.claude/settings.json` hook registrations.
+- `/cc-codex-collaborate-loop-start`: enable full-auto-safe loop continuation by installing cccc hook scripts into `.claude/hooks`, registering them in `.claude/settings.json`, and updating `config.json` automation settings.
+- `/cc-codex-collaborate-loop-stop`: disable loop automation by removing only cccc hook registrations from `.claude/settings.json` and updating `config.json` to disable the loop.
 
 Do not enable Stop-hook automation implicitly. The user must explicitly run `/cc-codex-collaborate-loop-start`.
 
-`docs/cccc` is a runtime workspace. It must be generated on first use by initialization logic and should not be required as a pre-copied project directory.
-
+`docs/cccc` is a runtime workspace. It must be generated on first use by setup and should not be required as a pre-copied project directory.
 
 ## Subcommand handling
 
 Interpret the first argument after `/cc-codex-collaborate` as a subcommand when it matches one of these values:
 
-- `setup`: run `scripts/cccc-setup.sh`, which initializes the workspace and begins project discovery. Do not start implementation.
+- `setup`: run `scripts/cccc-setup.sh`, the interactive configuration wizard. Do not start planning or implementation.
 - `status`: run `scripts/cccc-status.sh` and summarize.
 - `loop-status`: run `scripts/cccc-loop-status.sh` and summarize.
 - `loop-start`: run `scripts/cccc-loop-start.sh` and summarize.
 - `loop-stop`: run `scripts/cccc-loop-stop.sh` and summarize.
 
-If no known subcommand is provided, treat the arguments as the user's coding task. Before doing project discovery or planning, ensure setup has been performed. If `.claude/commands/` or `docs/cccc/` is missing, run `scripts/cccc-setup.sh` first, then continue.
+If no known subcommand is provided, treat the arguments as the user's coding task. Before doing project discovery or planning, ensure setup has been performed. If `docs/cccc/config.json` is missing, prompt the user to run `/cc-codex-collaborate setup` first.
 
 ## Role separation
 
@@ -100,12 +231,13 @@ Before planning or asking any question, detect the user's primary language.
 
 Detection priority:
 
-1. Explicit user preference.
-2. Latest user instruction language.
-3. Main task language if the message is mixed.
-4. If still unclear, default to the language of the most recent user message.
+1. `config.json` `language.user_language` if not `"auto"`.
+2. Explicit user preference.
+3. Latest user instruction language.
+4. Main task language if the message is mixed.
+5. If still unclear, default to the language of the most recent user message.
 
-Store it in `docs/cccc/state.json` as `user_language`.
+Store it in `docs/cccc/config.json` as `language.user_language`.
 
 All human-facing output must use `user_language`. Codex may reason in English, but Claude Code must summarize and ask questions in the user's language.
 
@@ -139,31 +271,43 @@ IMPLEMENT_MILESTONE
 CLAUDE_SELF_REVIEW
       ↓
 CODEX_MILESTONE_REVIEW
-      ├─ PASS → RECORD_ACCEPTANCE → PLAN_NEXT_MILESTONE
-      ├─ FAIL_FIXABLE → CLAUDE_FIX → CLAUDE_SELF_REVIEW
-      ├─ FAIL_UNCLEAR → PAUSE_FOR_HUMAN
-      ├─ NEEDS_HUMAN → PAUSE_FOR_HUMAN
-      ├─ SENSITIVE_OPERATION → PAUSE_FOR_HUMAN
-      └─ MAX_REVIEW_EXCEEDED → THRESHOLD_POLICY
+  ├─ PASS → RECORD_ACCEPTANCE → PLAN_NEXT_MILESTONE
+  ├─ FAIL_FIXABLE → CLAUDE_FIX → CLAUDE_SELF_REVIEW
+  ├─ FAIL_UNCLEAR → PAUSE_FOR_HUMAN
+  ├─ NEEDS_HUMAN → PAUSE_FOR_HUMAN
+  ├─ SENSITIVE_OPERATION → PAUSE_FOR_HUMAN
+  └─ MAX_REVIEW_EXCEEDED → THRESHOLD_POLICY
 ```
 
 No implementation may start until project discovery is complete and the initial roadmap has passed Claude self-review plus Codex adversarial plan review, unless the human explicitly chooses to override after a pause.
 
-## Default thresholds
+## Thresholds
 
-Use these defaults unless the user overrides them in `docs/cccc/state.json`.
+Thresholds are stored in `docs/cccc/config.json`. Read them from there, not from state.json.
+
+Default thresholds (recommended preset):
 
 ```json
 {
-  "max_plan_review_rounds": 3,
-  "max_milestones_per_run": 5,
-  "max_review_rounds_per_milestone": 3,
-  "max_fix_attempts_per_milestone": 3,
-  "max_stop_hook_continuations": 10,
-  "max_context_refresh_rounds": 3,
-  "max_diff_lines_per_milestone": 1200,
-  "max_changed_files_per_milestone": 20,
-  "on_max_review_exceeded": "pause"
+  "planning": {
+    "max_plan_review_rounds": 3
+  },
+  "milestones": {
+    "max_milestones_per_run": 5,
+    "max_diff_lines_per_milestone": 1200,
+    "max_changed_files_per_milestone": 20
+  },
+  "review": {
+    "max_review_rounds_per_milestone": 3,
+    "max_fix_attempts_per_milestone": 3,
+    "block_on_p0": true,
+    "block_on_p1": true,
+    "allow_continue_with_p2": true
+  },
+  "automation": {
+    "stop_hook_loop_enabled": false,
+    "max_stop_hook_continuations": 10
+  }
 }
 ```
 
@@ -185,7 +329,7 @@ Immediately pause and ask the human if any of these occur:
 6. Codex returns `needs_human: true`.
 7. Codex cannot determine a safe next step.
 8. Requirements are ambiguous and continuing would create product, security, financial, architecture, or data-loss risk.
-9. The same milestone exceeds `max_review_rounds_per_milestone`.
+9. The same milestone exceeds `max_review_rounds_per_milestone` from config.
 10. Claude Code and Codex disagree on whether the result is safe.
 11. Real user data or credentials would be exposed to a model, log, test, or third-party service.
 12. Project context is missing or stale and cannot be reconstructed by reading the repository.
@@ -330,7 +474,7 @@ docs/cccc/context-bundle.md
 
 The context bundle must include:
 
-1. user language
+1. user language (from config.json)
 2. original user task
 3. current state
 4. project map
@@ -349,6 +493,7 @@ The context bundle must include:
 17. relevant diff
 18. test output
 19. last review result
+20. current config thresholds
 
 Hard rule:
 
@@ -356,6 +501,7 @@ Hard rule:
 No context bundle, no Codex planning.
 No project discovery, no roadmap.
 No approved roadmap, no implementation.
+No config.json, run setup first.
 ```
 
 ## Milestone implementation loop
@@ -364,14 +510,15 @@ For each milestone:
 
 1. Confirm roadmap is approved.
 2. Confirm current milestone is clearly scoped.
-3. Implement the smallest coherent change.
-4. Run relevant tests and checks.
-5. Perform Claude self-review.
-6. Regenerate `docs/cccc/context-bundle.md`.
-7. Run Codex milestone review in read-only mode.
-8. If Codex passes, record acceptance and select next milestone.
-9. If Codex fails with fixable findings, fix and repeat.
-10. If Codex needs human input or detects unsafe work, pause.
+3. Read thresholds from `docs/cccc/config.json`.
+4. Implement the smallest coherent change.
+5. Run relevant tests and checks.
+6. Perform Claude self-review.
+7. Regenerate `docs/cccc/context-bundle.md`.
+8. Run Codex milestone review in read-only mode.
+9. If Codex passes, record acceptance and select next milestone.
+10. If Codex fails with fixable findings, fix and repeat.
+11. If Codex needs human input or detects unsafe work, pause.
 
 ## Codex next milestone rule
 
@@ -388,21 +535,25 @@ Claude Code must validate that the proposed next milestone:
 
 ## Stop hook automation rule
 
-The optional Stop hook may continue the loop only when:
+The optional Stop hook (`cccc-stop.sh`) reads configuration from `docs/cccc/config.json` and runtime state from `docs/cccc/state.json`.
 
+It may block the stop (returning `decision: "block"`) only when all of these conditions are met:
+
+- `docs/cccc/config.json` exists and `automation.stop_hook_loop_enabled` is `true`
+- `docs/cccc/config.json` `mode` is `full-auto-safe`
 - `docs/cccc/state.json` exists
-- the loop is enabled
-- status is not done
-- status is not paused
-- status is not unsafe
-- status is not waiting for human input
-- continuation count is below threshold
+- `status` is not a terminal or paused state (DONE, COMPLETED, FAILED, PAUSED_FOR_HUMAN, NEEDS_HUMAN, NEEDS_SECRET, SENSITIVE_OPERATION, UNSAFE, PAUSED_FOR_SYSTEM)
+- `pause_reason` is empty
+- `stop_hook_active` in the hook input is not `true` (prevents infinite recursion)
+- continuation count is below `automation.max_stop_hook_continuations` (from config.json)
+
+When the hook blocks, it outputs a `reason` that instructs Claude to continue the state machine loop internally — not just take one small step and stop again. The skill's internal state machine must drive the actual loop; the hook merely prevents Claude Code from stopping prematurely.
 
 The Stop hook must never continue past hard pause conditions.
 
 ## User-facing progress format
 
-Use the user's language.
+Use the user's language (from `config.json` `language.user_language`).
 
 Chinese:
 

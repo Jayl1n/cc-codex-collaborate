@@ -14,6 +14,10 @@ cccc_state() {
   echo "docs/cccc/state.json"
 }
 
+cccc_config() {
+  echo "docs/cccc/config.json"
+}
+
 cccc_skill_dir() {
   local root
   root="$(cccc_repo_root)"
@@ -33,5 +37,32 @@ cccc_require_cmd() {
 }
 
 cccc_init_dirs() {
-  mkdir -p docs/cccc/{reviews/plan,reviews/milestones,logs,runtime,templates}
+  mkdir -p docs/cccc/{reviews/plan,reviews/milestones,logs,runtime,templates,backups}
+}
+
+# Read a value from config.json. Usage: cccc_config_value '.mode' 'default'
+cccc_config_value() {
+  local key="$1" default="$2"
+  local config
+  config="$(cccc_config)"
+  if [[ -f "$config" ]]; then
+    python3 - "$config" "$key" "$default" <<'PY'
+import json, sys
+try:
+    data = json.loads(open(sys.argv[1]).read())
+    parts = sys.argv[2].lstrip('.').split('.')
+    v = data
+    for p in parts:
+        if isinstance(v, dict) and p in v:
+            v = v[p]
+        else:
+            v = None
+            break
+    print(v if v is not None else sys.argv[3])
+except Exception:
+    print(sys.argv[3])
+PY
+  else
+    echo "$default"
+  fi
 }

@@ -6,43 +6,121 @@ source "$SCRIPT_DIR/cccc-common.sh"
 ROOT="$(cccc_repo_root)"
 cd "$ROOT"
 SETTINGS=".claude/settings.json"
+CONFIG="docs/cccc/config.json"
 STATE="docs/cccc/state.json"
 HOOK_DIR=".claude/hooks"
 
-has_cmd() {
-  local cmd="$1"
-  [[ -f "$SETTINGS" ]] && jq -e --arg cmd "$cmd" '.. | objects | select(.command? == $cmd)' "$SETTINGS" >/dev/null 2>&1
+# Helper: read value from JSON file using python3
+json_value() {
+  local file="$1" key="$2" default="$3"
+  python3 - "$file" "$key" "$default" <<'PY'
+import json, sys
+try:
+    data = json.loads(open(sys.argv[1]).read())
+    parts = sys.argv[2].lstrip('.').split('.')
+    v = data
+    for p in parts:
+        if isinstance(v, dict) and p in v:
+            v = v[p]
+        else:
+            v = None
+            break
+    print(v if v is not None else sys.argv[3])
+except Exception:
+    print(sys.argv[3])
+PY
 }
 
-state_value() {
-  local key="$1" default="$2"
-  if [[ -f "$STATE" ]]; then jq -r "$key // \"$default\"" "$STATE" 2>/dev/null || echo "$default"; else echo "$default"; fi
+# Helper: check if a hook command is registered in settings
+has_hook_cmd() {
+  local cmd="$1"
+  python3 - "$SETTINGS" "$cmd" <<'PY'
+import json, sys
+try:
+    settings = json.loads(open(sys.argv[1]).read())
+    target = sys.argv[2]
+    for event, groups in settings.get('hooks', {}).items():
+        for group in groups:
+            for hook in group.get('hooks', []):
+                if hook.get('command') == target:
+                    print('yes')
+                    sys.exit(0)
+    print('no')
+except Exception:
+    print('no')
+PY
 }
 
 echo "cc-codex-collaborate loop status"
-echo "- Workspace: docs/cccc"
-echo "- State file: $([[ -f "$STATE" ]] && echo present || echo missing)"
-echo "- Mode: $(state_value '.mode' 'unknown')"
-echo "- Enabled: $(state_value '.enabled' 'false')"
-echo "- Status: $(state_value '.status' 'unknown')"
-echo "- Pause reason: $(state_value '.pause_reason' '')"
-echo "- Settings file: $([[ -f "$SETTINGS" ]] && echo present || echo missing)"
+echo "================================"
+echo ""
 
-declare -A hooks=(
-  [PreToolUse]="\${CLAUDE_PROJECT_DIR}/.claude/hooks/cccc-sensitive-op-guard.sh"
-  [Stop]="\${CLAUDE_PROJECT_DIR}/.claude/hooks/cccc-stop.sh"
-  [StopFailure]="\${CLAUDE_PROJECT_DIR}/.claude/hooks/cccc-stop-failure.sh"
-)
+# Config status
+if [[ -f "$CONFIG" ]]; then
+  echo "Config file: present ($CONFIG)"
+  echo "  mode: $(json_value "$CONFIG" '.mode' 'unknown')"
+  echo "  stop_hook_loop_enabled: $(json_value "$CONFIG" '.automation.stop_hook_loop_enabled' 'false')"
+  echo "  user_language: $(json_value "$CONFIG" '.language.user_language' 'auto')"
+else
+  echo "Config file: MISSING ($CONFIG)"
+  echo "  Run /cc-codex-collaborate setup first."
+fi
 
-for name in PreToolUse Stop StopFailure; do
-  script="${hooks[$name]##*/}"
-  if [[ -x "$HOOK_DIR/$script" ]]; then file_status="installed"; elif [[ -f "$HOOK_DIR/$script" ]]; then file_status="present but not executable"; else file_status="missing"; fi
-  if has_cmd "${hooks[$name]}"; then config_status="configured"; else config_status="not configured"; fi
-  echo "- $name hook: $file_status, $config_status"
+echo ""
+
+# State status
+if [[ -f "$STATE" ]]; then
+  echo "State file: present ($STATE)"
+  echo "  status: $(json_value "$STATE" '.status' 'unknown')"
+  echo "  current_milestone: $(json_value "$STATE" '.current_milestone_id' 'none')"
+  echo "  pause_reason: $(json_value "$STATE" '.pause_reason' '')"
+  echo "  enabled: $(json_value "$STATE" '.enabled' 'false')"
+else
+  echo "State file: MISSING ($STATE)"
+fi
+
+echo ""
+
+# Hooks directory and files
+echo "Hooks directory: $([[ -d "$HOOK_DIR" ]] && echo present || echo missing)"
+for script in cccc-sensitive-op-guard.sh cccc-stop.sh cccc-stop-failure.sh; do
+  if [[ -x "$HOOK_DIR/$script" ]]; then
+    file_status="installed"
+  elif [[ -f "$HOOK_DIR/$script" ]]; then
+    file_status="present (not executable)"
+  else
+    file_status="missing"
+  fi
+  echo "  $script: $file_status"
 done
 
-if [[ -f "$STATE" ]] && [[ "$(state_value '.mode' 'supervised-auto')" == "full-auto-safe" ]] && has_cmd "\${CLAUDE_PROJECT_DIR}/.claude/hooks/cccc-stop.sh"; then
-  echo "- Auto loop: enabled"
+echo ""
+
+# Settings.json hook registrations
+echo "Settings file: $([[ -f "$SETTINGS" ]] && echo present || echo missing)"
+hook_commands=(
+  "PreToolUse:\${CLAUDE_PROJECT_DIR}/.claude/hooks/cccc-sensitive-op-guard.sh"
+  "Stop:\${CLAUDE_PROJECT_DIR}/.claude/hooks/cccc-stop.sh"
+  "StopFailure:\${CLAUDE_PROJECT_DIR}/.claude/hooks/cccc-stop-failure.sh"
+)
+for entry in "${hook_commands[@]}"; do
+  event="${entry%%:*}"
+  cmd="${entry#*:}"
+  configured="$(has_hook_cmd "$cmd")"
+  echo "  $event: $configured"
+done
+
+echo ""
+
+# Overall loop status
+loop_enabled_in_config="false"
+if [[ -f "$CONFIG" ]]; then
+  loop_enabled_in_config="$(json_value "$CONFIG" '.automation.stop_hook_loop_enabled' 'false')"
+fi
+stop_hook_registered="$(has_hook_cmd '${CLAUDE_PROJECT_DIR}/.claude/hooks/cccc-stop.sh')"
+
+if [[ "$loop_enabled_in_config" == "True" ]] && [[ "$stop_hook_registered" == "yes" ]]; then
+  echo "Auto loop: ENABLED"
 else
-  echo "- Auto loop: disabled"
+  echo "Auto loop: DISABLED"
 fi
