@@ -168,6 +168,32 @@ The release zip does not include the following runtime directories — they are 
 docs/cccc/
 ```
 
+## Updating
+
+To upgrade the skill, first install the new skill files (git pull, overwrite zip, package manager, etc.).
+
+Then run:
+
+```text
+/cc-codex-collaborate update
+```
+
+Update safely migrates:
+- `docs/cccc/config.json` — adds new fields, preserves user settings
+- `docs/cccc/state.json` — adds new fields, preserves runtime state
+- `.claude/commands/` — syncs generated commands, preserves user-modified commands
+- `.claude/hooks/` — only syncs if loop is already enabled
+
+Update does NOT overwrite:
+- `roadmap.md`, `milestone-backlog.md`, `decision-log.md`, `risk-register.md`
+- `docs/cccc/reviews/`, `docs/cccc/logs/`
+
+Update creates backup under `docs/cccc/backups/update-<timestamp>/`.
+
+If hooks were not enabled before, update does NOT enable them.
+
+Use `/cc-codex-collaborate-loop-status` to check whether update is recommended.
+
 ## Command reference
 
 ### Main commands
@@ -175,6 +201,7 @@ docs/cccc/
 ```text
 /cc-codex-collaborate <task>       Start the full collaboration loop
 /cc-codex-collaborate setup        Interactive configuration wizard (first-time entry point)
+/cc-codex-collaborate update       Safe workspace migration (sync after upgrade)
 /cc-codex-collaborate plan         Generate/update the plan
 /cc-codex-collaborate plan-review  Trigger plan review
 /cc-codex-collaborate run          Run the current milestone

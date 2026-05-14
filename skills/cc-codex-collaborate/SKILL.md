@@ -210,12 +210,44 @@ Do not enable Stop-hook automation implicitly. The user must explicitly run `/cc
 Interpret the first argument after `/cc-codex-collaborate` as a subcommand when it matches one of these values:
 
 - `setup`: run `scripts/cccc-setup.sh`, the interactive configuration wizard. Do not start planning or implementation.
+- `update`: run `scripts/cccc-update.sh`, safe workspace migration after skill upgrade. Sync config/state fields, commands, and enabled hooks. Does NOT start any task, does NOT enable hooks, does NOT run Codex review.
 - `status`: run `scripts/cccc-status.sh` and summarize.
 - `loop-status`: run `scripts/cccc-loop-status.sh` and summarize.
 - `loop-start`: run `scripts/cccc-loop-start.sh` and summarize.
 - `loop-stop`: run `scripts/cccc-loop-stop.sh` and summarize.
 
 If no known subcommand is provided, treat the arguments as the user's coding task. Before doing project discovery or planning, ensure setup has been performed. If `docs/cccc/config.json` is missing, prompt the user to run `/cc-codex-collaborate setup` first.
+
+## Public commands summary
+
+| Command | Purpose |
+| --- | --- |
+| `/cc-codex-collaborate setup` | First-time setup. Interactive configuration wizard. Generates docs/cccc and .claude/commands. Does NOT enable hooks. |
+| `/cc-codex-collaborate update` | Safe migration after skill upgrade. Syncs config/state fields, commands, enabled hooks. Does NOT overwrite user planning/review history. Does NOT enable hooks if not already enabled. |
+| `/cc-codex-collaborate "task"` | Start user's free-form task description. Full collaboration loop. |
+| `/cc-codex-collaborate-loop-status` | Show loop/hooks/Codex gates/version status. |
+| `/cc-codex-collaborate-loop-start` | Enable stop-hook auto-continuation. |
+| `/cc-codex-collaborate-loop-stop` | Disable stop-hook auto-continuation. |
+
+## Update command
+
+When invoked with `update`, run:
+
+```bash
+.claude/skills/cc-codex-collaborate/scripts/cccc-update.sh
+```
+
+Update behavior:
+
+- Does NOT download new skill. Assumes user already installed new version via git pull, zip, or package manager.
+- Checks if docs/cccc exists. If not, prompts user to run setup first.
+- Creates backup under `docs/cccc/backups/update-<timestamp>/`.
+- Migrates config.json: adds new template fields, preserves user settings, updates skill metadata.
+- Migrates state.json: adds new template fields, preserves runtime state, updates migration metadata.
+- Syncs commands: overwrites generated commands, preserves user-modified commands (creates .new file).
+- Syncs hooks: only if loop already enabled. Does NOT enable hooks if not already enabled.
+- Does NOT change `automation.stop_hook_loop_enabled` or `mode`.
+- Outputs migration report with version info and file changes.
 
 ## Role separation
 

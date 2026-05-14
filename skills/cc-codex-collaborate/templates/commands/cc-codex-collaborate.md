@@ -1,6 +1,10 @@
+<!-- generated-by: cc-codex-collaborate -->
+<!-- generated-file: true -->
+<!-- template-version: 0.1.7 -->
+
 ---
-description: Coordinate Claude Code and Codex in a milestone-based collaboration loop. Use "setup" for first-time configuration.
-argument-hint: "[task description | setup | status | loop-status | loop-start | loop-stop]"
+description: Coordinate Claude Code and Codex in a milestone-based collaboration loop. Use "setup" for first-time configuration, "update" for safe migration.
+argument-hint: "[task description | setup | update | status | loop-status | loop-start | loop-stop]"
 ---
 
 You are activating the cc-codex-collaborate skill. Follow the instructions in `.claude/skills/cc-codex-collaborate/SKILL.md` exactly.
@@ -10,6 +14,7 @@ You are activating the cc-codex-collaborate skill. Follow the instructions in `.
 Parse the first argument:
 
 - **`setup`** — Run the interactive setup wizard. Do NOT start any task. Follow the "First-run setup" and "Setup wizard flow" sections in SKILL.md.
+- **`update`** — Run safe workspace migration after upgrading skill. Sync config/state fields, commands, and enabled hooks. Does NOT overwrite user planning/review history. Does NOT enable hooks if not already enabled.
 - **`status`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-status.sh` and summarize.
 - **`loop-status`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-loop-status.sh` and summarize.
 - **`loop-start`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-loop-start.sh` and summarize.

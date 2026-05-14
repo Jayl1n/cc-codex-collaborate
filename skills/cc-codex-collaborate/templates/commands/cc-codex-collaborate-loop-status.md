@@ -1,3 +1,7 @@
+<!-- generated-by: cc-codex-collaborate -->
+<!-- generated-file: true -->
+<!-- template-version: 0.1.7 -->
+
 ---
 description: Show cc-codex-collaborate loop and hooks status.
 argument-hint: ""

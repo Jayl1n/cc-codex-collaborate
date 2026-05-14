@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.1.7 - 2026-05-15
+
+### Added
+
+- `/cc-codex-collaborate update` — Safe workspace migration after skill upgrade.
+- `cccc-update.sh` — Update script for config/state/command/hook sync.
+- `cccc-migrate-config.py` — Config migration with deep merge, preserves user settings.
+- `cccc-migrate-state.py` — State migration with deep merge, preserves runtime state.
+- Generated command markers (`generated-by`, `generated-file`, `template-version`) for safe command updates.
+- `skill.installed_version`, `skill.workspace_schema_version`, `skill.last_updated_at` in config.json.
+- `workspace_schema_version`, `last_migration_at`, `last_migration_from_version`, `last_migration_to_version` in state.json.
+- Version and schema status in `cccc-loop-status.sh`.
+- Update recommendation in loop-status when skill version differs from project version.
+- Update backups under `docs/cccc/backups/update-<timestamp>/`.
+
+### Changed
+
+- `cccc-loop-status.sh` now shows skill version, project installed version, schema versions, migration history, and update recommendation.
+- Command templates now include generated markers for safe updates.
+- README (zh/en) updated with Updating section and update command reference.
+- SKILL.md updated with update subcommand handling and public commands summary.
+
+### Notes
+
+- `update` does NOT download new skill. Assumes user already installed new version.
+- `update` does NOT enable hooks if not already enabled.
+- `update` does NOT overwrite user planning documents (roadmap, milestone-backlog, decision-log, risk-register).
+- `update` does NOT overwrite reviews or logs.
+
 ## 0.1.4 - 2026-05-15
 
 ### Added

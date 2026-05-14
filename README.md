@@ -168,6 +168,32 @@ docs/cccc/
 docs/cccc/
 ```
 
+## 升级
+
+升级 skill 时，先安装新版 skill 文件（git pull、覆盖 zip、包管理器等）。
+
+然后运行：
+
+```text
+/cc-codex-collaborate update
+```
+
+update 会安全迁移：
+- `docs/cccc/config.json` — 补齐新字段，保留用户设置
+- `docs/cccc/state.json` — 补齐新字段，保留运行状态
+- `.claude/commands/` — 同步生成的命令，保留用户修改的命令
+- `.claude/hooks/` — 仅在 loop 已启用时同步
+
+update 不会覆盖：
+- `roadmap.md`、`milestone-backlog.md`、`decision-log.md`、`risk-register.md`
+- `docs/cccc/reviews/`、`docs/cccc/logs/`
+
+update 会在 `docs/cccc/backups/update-<timestamp>/` 下创建备份。
+
+如果之前没有启用 hooks，update 不会自动启用。
+
+使用 `/cc-codex-collaborate-loop-status` 查看是否建议 update。
+
 ## 命令参考
 
 ### 主命令
@@ -175,6 +201,7 @@ docs/cccc/
 ```text
 /cc-codex-collaborate <任务描述>    启动完整协作流程
 /cc-codex-collaborate setup         交互式配置向导（首次使用入口）
+/cc-codex-collaborate update        安全迁移工作区（升级后同步）
 /cc-codex-collaborate plan          生成/更新规划
 /cc-codex-collaborate plan-review   触发规划审核
 /cc-codex-collaborate run           运行当前 milestone

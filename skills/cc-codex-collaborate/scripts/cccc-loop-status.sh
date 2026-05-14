@@ -51,11 +51,58 @@ except Exception:
 PY
 }
 
-echo "cc-codex-collaborate loop status"
-echo "================================"
+echo "cc-codex-collaborate status"
+echo "============================"
 echo ""
 
-# Config status
+# ── Version information ──
+
+SKILL_DIR="$(cccc_skill_dir)"
+SKILL_VERSION="$(cat "$SKILL_DIR/VERSION" 2>/dev/null || echo 'unknown')"
+PROJECT_VERSION="$(json_value "$CONFIG" '.skill.installed_version' 'unknown')"
+# Fallback to old version field if skill.installed_version missing
+if [[ "$PROJECT_VERSION" == "unknown" ]]; then
+  PROJECT_VERSION="$(json_value "$CONFIG" '.version' 'unknown')"
+fi
+
+echo "Version:"
+echo "  Skill version: $SKILL_VERSION"
+echo "  Project installed version: $PROJECT_VERSION"
+
+# Schema versions
+CONFIG_SCHEMA="$(json_value "$CONFIG" '.skill.workspace_schema_version' 'unknown')"
+STATE_SCHEMA="$(json_value "$STATE" '.workspace_schema_version' 'unknown')"
+
+echo "  Config schema version: $CONFIG_SCHEMA"
+echo "  State schema version: $STATE_SCHEMA"
+
+# ── Migration history ──
+
+if [[ -f "$STATE" ]]; then
+  LAST_MIGRATION="$(json_value "$STATE" '.last_migration_at' '')"
+  FROM_VERSION="$(json_value "$STATE" '.last_migration_from_version' '')"
+  TO_VERSION="$(json_value "$STATE" '.last_migration_to_version' '')"
+  if [[ -n "$LAST_MIGRATION" && "$LAST_MIGRATION" != "null" ]]; then
+    echo "  Last migration: $LAST_MIGRATION"
+    echo "  Migration: $FROM_VERSION -> $TO_VERSION"
+  fi
+fi
+
+echo ""
+
+# ── Update recommendation ──
+
+if [[ "$SKILL_VERSION" != "$PROJECT_VERSION" ]]; then
+  echo "Update recommended: YES"
+  echo "  Run: /cc-codex-collaborate update"
+else
+  echo "Update recommended: NO (versions match)"
+fi
+
+echo ""
+
+# ── Config status ──
+
 if [[ -f "$CONFIG" ]]; then
   echo "Config file: present ($CONFIG)"
   echo "  mode: $(json_value "$CONFIG" '.mode' 'unknown')"
@@ -68,7 +115,8 @@ fi
 
 echo ""
 
-# State status
+# ── State status ──
+
 if [[ -f "$STATE" ]]; then
   echo "State file: present ($STATE)"
   echo "  status: $(json_value "$STATE" '.status' 'unknown')"
