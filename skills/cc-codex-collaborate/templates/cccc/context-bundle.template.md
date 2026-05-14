@@ -65,7 +65,7 @@ _To be filled by Claude Code._
 
 ## Repository summary
 
-_To be filled by Claude Code during `/cc-codex-collaborate init`._
+_To be filled by Claude Code during project discovery._
 
 ## Important directories
 

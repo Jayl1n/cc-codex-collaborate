@@ -119,8 +119,7 @@ Setup **does not overwrite** existing files and **does not enable** hooks. After
 
 ```text
 /cc-codex-collaborate <task>       Start the full collaboration loop
-/cc-codex-collaborate setup        First-time initialization
-/cc-codex-collaborate init <task>  Initialize a task only (no loop)
+/cc-codex-collaborate setup        First-time initialization (workspace + project discovery)
 /cc-codex-collaborate plan         Generate/update the plan
 /cc-codex-collaborate plan-review  Trigger plan review
 /cc-codex-collaborate run          Run the current milestone

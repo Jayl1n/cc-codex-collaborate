@@ -2,7 +2,7 @@
 set -euo pipefail
 STATE="docs/cccc/state.json"
 if [[ ! -f "$STATE" ]]; then
-  echo "cc-codex-collaborate is not initialized. Run /cc-codex-collaborate init first."
+  echo "cc-codex-collaborate is not initialized. Run /cc-codex-collaborate setup first."
   exit 1
 fi
 

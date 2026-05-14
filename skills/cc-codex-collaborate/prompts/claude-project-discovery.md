@@ -1,6 +1,6 @@
 # Claude Project Discovery Prompt
 
-Use this prompt as guidance when running `/cc-codex-collaborate init`.
+Use this prompt as guidance during project discovery (triggered by `/cc-codex-collaborate setup` or when starting a new task).
 
 You are Claude Code performing project discovery before planning. Do not implement business code during discovery.
 

@@ -48,17 +48,27 @@ try:
     data = json.loads(p.read_text())
 except Exception:
     data = {}
+
+existing_language = data.get('user_language')
+existing_source = data.get('language_source')
+
 data.update({
     'skill_name': 'cc-codex-collaborate',
     'skill_version': '0.1.2',
     'workspace': 'docs/cccc',
     'task': os.environ.get('CCCC_TASK', ''),
-    'user_language': os.environ.get('CCCC_LANGUAGE', 'unknown'),
-    'language_source': 'inferred_from_latest_user_message',
     'enabled': True,
     'status': 'DISCOVERING_PROJECT',
     'updated_at': os.environ.get('CCCC_NOW', ''),
 })
+
+if existing_language:
+    data['user_language'] = existing_language
+    data['language_source'] = existing_source or 'preserved_from_previous_session'
+else:
+    data['user_language'] = os.environ.get('CCCC_LANGUAGE', 'unknown')
+    data['language_source'] = 'inferred_from_latest_user_message'
+
 data.setdefault('mode', 'supervised-auto')
 data.setdefault('created_at', os.environ.get('CCCC_NOW', ''))
 data.setdefault('project_context_status', 'not_ready')

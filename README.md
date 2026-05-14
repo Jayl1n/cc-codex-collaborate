@@ -119,8 +119,7 @@ setup **不会覆盖**已有文件，**不会启用** hooks。完成后会说明
 
 ```text
 /cc-codex-collaborate <任务描述>    启动完整协作流程
-/cc-codex-collaborate setup         首次初始化
-/cc-codex-collaborate init <任务>   仅初始化任务（不启动循环）
+/cc-codex-collaborate setup         首次初始化（生成工作区 + 项目发现）
 /cc-codex-collaborate plan          生成/更新规划
 /cc-codex-collaborate plan-review   触发规划审核
 /cc-codex-collaborate run           运行当前 milestone

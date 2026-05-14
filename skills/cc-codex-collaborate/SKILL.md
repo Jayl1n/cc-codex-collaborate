@@ -78,8 +78,7 @@ Do not enable Stop-hook automation implicitly. The user must explicitly run `/cc
 
 Interpret the first argument after `/cc-codex-collaborate` as a subcommand when it matches one of these values:
 
-- `setup`: run `scripts/cccc-setup.sh`, then report generated files and simple usage. Do not start planning or implementation.
-- `init`: run `scripts/cccc-init.sh` and begin project discovery.
+- `setup`: run `scripts/cccc-setup.sh`, which initializes the workspace and begins project discovery. Do not start implementation.
 - `status`: run `scripts/cccc-status.sh` and summarize.
 - `loop-status`: run `scripts/cccc-loop-status.sh` and summarize.
 - `loop-start`: run `scripts/cccc-loop-start.sh` and summarize.
