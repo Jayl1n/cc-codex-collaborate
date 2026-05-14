@@ -1,6 +1,6 @@
 <!-- generated-by: cc-codex-collaborate -->
 <!-- generated-file: true -->
-<!-- template-version: 0.1.7 -->
+<!-- template-version: 0.1.8 -->
 
 ---
 description: Enable cc-codex-collaborate stop-hook automation for full-auto-safe loop continuation.

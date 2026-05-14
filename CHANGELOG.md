@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.8 - 2026-05-15
+
+### Added
+
+- Exit reason logging in `cccc-stop.sh` — every exit point now outputs a clear reason for debugging:
+  - EXIT: jq not available
+  - EXIT: config.json or state.json not found
+  - EXIT: loop not enabled
+  - EXIT: mode is not full-auto-safe
+  - EXIT: terminal/pause status
+  - EXIT: pause_reason present
+  - EXIT: recursion guard
+  - EXIT: continuation budget exhausted
+  - BLOCK: continuing loop (with status/milestone/continuations details)
+
+### Changed
+
+- README/README_EN version numbers now correctly reflect current version.
+
 ## 0.1.7 - 2026-05-15
 
 ### Added
