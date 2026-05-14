@@ -1,0 +1,16 @@
+---
+description: Disable cc-codex-collaborate stop-hook automation.
+argument-hint: ""
+---
+
+Disable cc-codex-collaborate loop automation.
+
+Execute:
+
+```bash
+.claude/skills/cc-codex-collaborate/scripts/cccc-loop-stop.sh
+```
+
+This command removes cccc hook registrations from `.claude/settings.json` without deleting unrelated user hooks. It sets `docs/cccc/state.json` back to manual/supervised mode.
+
+After running it, summarize what changed in the user's primary language.

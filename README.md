@@ -1,0 +1,185 @@
+# CCCC — Claude Code × Codex 协作引擎
+
+<p align="center">
+  <strong>版本</strong> 0.1.2 &nbsp;|&nbsp; <strong>代号</strong> CCCC &nbsp;|&nbsp; <strong>协议</strong> MIT
+</p>
+
+<p align="center">
+  <a href="./README_EN.md">English</a>
+</p>
+
+---
+
+**CCCC**（cc-codex-collaborate）是一个 Claude Code Skill，让 Claude Code 和 Codex 在安全的、基于里程碑的工程循环中协作。
+
+Claude Code 负责发现项目、制定规划、实现里程碑、修复问题、管理状态。Codex 作为独立只读审阅者，挑战初始规划、审阅每个里程碑、建议安全的下一步。遇到歧义、敏感操作、真实密钥、生产变更、资金操作或阈值失败时，必须由人类决策。
+
+---
+
+## 它做什么
+
+把一次编码任务变成可控的协作循环：
+
+1. **检测语言** — 识别用户主语言，全程使用该语言交互。
+2. **发现项目** — 规划前先理解已有代码和架构。
+3. **构建上下文** — 在 `docs/cccc` 下生成项目上下文文件。
+4. **制定路线** — 生成 roadmap 与 milestone backlog。
+5. **自审规划** — Claude Code 先做规划自审（planning self-review）。
+6. **对抗审核** — Codex 再做推翻式规划审核（adversarial plan review）。
+7. **安全启动** — 规划安全并通过后才进入实现阶段。
+8. **逐个实现** — 每次只实现一个 milestone。
+9. **独立审阅** — Codex 以只读模式审阅当前 diff。
+10. **修复迭代** — 修复 → 再审阅 → 通过后进入下一 milestone，直到完成或触发暂停。
+
+## 设计原则
+
+| 原则 | 说明 |
+| --- | --- |
+| **Claude Code 主导** | Claude Code 是唯一的编排者和实现者 |
+| **Codex 只审不写** | Codex 只读、推翻式审阅，不修改代码 |
+| **人类兜底** | 敏感决策必须由人类确认 |
+| **先理解再规划** | 没有项目理解，不做项目规划 |
+| **上下文先行** | 没有 `context-bundle.md`，不让 Codex 规划 |
+| **审核前置** | 没有自审 + 对抗审核，不开始实现 |
+| **安全闸门** | 遇到密钥/资金/生产/破坏性操作，不能自动继续 |
+
+## 运行时工作区
+
+`docs/cccc` 在首次使用时自动生成，无需手动创建。
+
+```
+docs/cccc/
+  state.json              # 运行状态
+  project-brief.md        # 项目简报
+  project-map.md          # 项目地图
+  current-state.md        # 当前状态快照
+  architecture.md         # 架构说明
+  test-strategy.md        # 测试策略
+  roadmap.md              # 路线图
+  milestone-backlog.md    # 里程碑待办
+  decision-log.md         # 决策日志
+  risk-register.md        # 风险登记
+  open-questions.md       # 待解决问题
+  context-bundle.md       # 上下文摘要（Codex 审阅的输入）
+  reviews/                # 审阅记录
+  logs/                   # 运行日志
+  runtime/                # 运行时临时文件
+```
+
+模板位于 `.claude/skills/cc-codex-collaborate/templates/cccc/`。
+
+## 安装
+
+将 skill 目录安装到目标项目：
+
+```
+.claude/skills/cc-codex-collaborate/
+```
+
+发布 zip 不包含以下运行时目录，它们会在需要时自动生成：
+
+```
+.claude/commands/
+.claude/hooks/
+docs/cccc/
+```
+
+## 快速开始
+
+### 1. 首次 setup
+
+```text
+/cc-codex-collaborate setup
+```
+
+setup 会生成或确认以下内容：
+
+```
+.claude/commands/
+  cc-codex-collaborate-loop-status.md
+  cc-codex-collaborate-loop-start.md
+  cc-codex-collaborate-loop-stop.md
+
+docs/cccc/
+  state.json, project-brief.md, project-map.md, ...
+  reviews/, logs/, runtime/
+```
+
+setup **不会覆盖**已有文件，**不会启用** hooks。完成后会说明生成了什么、保留了什么、hooks 状态及基本用法。
+
+### 2. 执行任务
+
+```text
+/cc-codex-collaborate "你的任务描述"
+```
+
+## 命令参考
+
+### 主命令
+
+```text
+/cc-codex-collaborate <任务描述>    启动完整协作流程
+/cc-codex-collaborate setup         首次初始化
+/cc-codex-collaborate init <任务>   仅初始化任务（不启动循环）
+/cc-codex-collaborate plan          生成/更新规划
+/cc-codex-collaborate plan-review   触发规划审核
+/cc-codex-collaborate run           运行当前 milestone
+/cc-codex-collaborate review        触发 milestone 审阅
+/cc-codex-collaborate status        查看当前状态
+/cc-codex-collaborate resume        恢复上次中断的任务
+```
+
+### Loop 自动化命令
+
+setup 后可用以下快捷命令：
+
+| 命令 | 作用 |
+| --- | --- |
+| `/cc-codex-collaborate-loop-status` | 查看 `docs/cccc` 状态、loop 模式、hooks 配置 |
+| `/cc-codex-collaborate-loop-start` | 启用 Stop-hook 自动续跑（`full-auto-safe` 模式） |
+| `/cc-codex-collaborate-loop-stop` | 禁用 loop 自动化，移除 cccc 的 hook 注册 |
+
+## Hook 行为
+
+hooks **默认不启用**。需要显式执行：
+
+```text
+/cc-codex-collaborate-loop-start
+```
+
+Stop hook 只负责"未完成则继续"的监督，**绝不放行**以下危险操作：
+
+- 人工问题 &ensp;·&ensp; 真实 secret &ensp;·&ensp; 钱包私钥/助记词
+- 真实 API key &ensp;·&ensp; 生产环境操作 &ensp;·&ensp; 真实资金操作
+- 破坏性命令 &ensp;·&ensp; Codex `needs_human` &ensp;·&ensp; 阈值失败
+
+禁用自动续跑：
+
+```text
+/cc-codex-collaborate-loop-stop
+```
+
+## 追问设计
+
+需要澄清时，采用 brainstorming 式追问：
+
+1. 说明为什么需要这个决策
+2. 给出 2–5 个具体选项
+3. 尽量推荐安全的默认选项
+4. 提供 `Other` 允许自由输入
+5. 将决策记录到 `docs/cccc/decision-log.md`
+
+## 推荐 .gitignore
+
+```gitignore
+docs/cccc/logs/
+docs/cccc/runtime/
+```
+
+可选择将 `docs/cccc/*.md` 提交到 git，以保留规划和审阅历史。
+
+---
+
+## 许可证
+
+[MIT](./LICENSE)

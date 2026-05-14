@@ -1,0 +1,30 @@
+{
+  "skill_name": "cc-codex-collaborate",
+  "skill_version": "0.1.1",
+  "workspace": "docs/cccc",
+  "task": "",
+  "user_language": "unknown",
+  "language_source": "not_detected",
+  "mode": "supervised-auto",
+  "enabled": false,
+  "status": "NOT_INITIALIZED",
+  "project_context_status": "not_ready",
+  "roadmap_status": "not_reviewed",
+  "current_milestone_id": null,
+  "completed_milestones": [],
+  "blocked_milestones": [],
+  "known_risks": [],
+  "pause_reason": null,
+  "stop_hook_continuations": 0,
+  "thresholds": {
+    "max_plan_review_rounds": 3,
+    "max_milestones_per_run": 5,
+    "max_review_rounds_per_milestone": 3,
+    "max_fix_attempts_per_milestone": 3,
+    "max_stop_hook_continuations": 10,
+    "max_context_refresh_rounds": 3,
+    "max_diff_lines_per_milestone": 1200,
+    "max_changed_files_per_milestone": 20,
+    "on_max_review_exceeded": "pause"
+  }
+}
