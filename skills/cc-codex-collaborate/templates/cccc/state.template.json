@@ -1,6 +1,6 @@
 {
   "skill_name": "cc-codex-collaborate",
-  "skill_version": "0.1.12",
+  "skill_version": "0.1.13",
   "workspace": "docs/cccc",
   "workspace_schema_version": 1,
   "last_migration_at": null,

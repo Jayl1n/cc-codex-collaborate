@@ -3,10 +3,22 @@
 # Does NOT download new skill. Assumes user already installed new version.
 # Does NOT enable hooks if not already enabled.
 # Does NOT overwrite user planning/review history.
+#
+# Usage:
+#   cccc-update.sh           # Normal update (skips if version unchanged)
+#   cccc-update.sh --force   # Force update regardless of version
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$SCRIPT_DIR/cccc-common.sh"
+
+FORCE=false
+if [[ "${1:-}" == "--force" ]]; then
+  FORCE=true
+  BACKUP_LABEL="force-update"
+else
+  BACKUP_LABEL="update"
+fi
 
 ROOT="$(cccc_repo_root)"
 cd "$ROOT"
@@ -20,7 +32,7 @@ SETTINGS_FILE="$ROOT/.claude/settings.json"
 # Read skill current version
 SKILL_VERSION="$(cat "$SKILL_DIR/VERSION" 2>/dev/null || echo "unknown")"
 TIMESTAMP="$(date -u +"%Y%m%dT%H%M%SZ")"
-BACKUP_DIR="docs/cccc/backups/update-$TIMESTAMP"
+BACKUP_DIR="docs/cccc/backups/$BACKUP_LABEL-$TIMESTAMP"
 
 # ── Check if workspace exists ──
 
@@ -82,6 +94,17 @@ except Exception:
 
 echo "Skill version: $SKILL_VERSION"
 echo "Project version: $PROJECT_VERSION"
+
+# ── Version check (skip if unchanged, unless --force) ──
+
+if ! $FORCE && [[ "$SKILL_VERSION" == "$PROJECT_VERSION" ]]; then
+  echo ""
+  echo "Version unchanged ($SKILL_VERSION). Nothing to update."
+  echo "Use --force or /cc-codex-collaborate force-update to force sync."
+  # Clean up empty backup dir
+  rmdir "$BACKUP_DIR" 2>/dev/null || true
+  exit 0
+fi
 
 # ── Migrate config.json ──
 
@@ -246,7 +269,11 @@ fi
 
 echo ""
 echo "════════════════════════════════════════════════════════════"
-echo "CCCC Update Complete"
+if $FORCE; then
+  echo "CCCC Force-Update Complete"
+else
+  echo "CCCC Update Complete"
+fi
 echo "════════════════════════════════════════════════════════════"
 
 echo ""

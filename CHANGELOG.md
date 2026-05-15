@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.1.13 - 2026-05-15
+
+### Added
+
+- `/cc-codex-collaborate force-update` — Force sync skill templates to workspace regardless of version number.
+- `/cc-codex-collaborate reset` / `reset state` — Reset state machine runtime state and rehydrate current progress from docs, reviews, and git history.
+- `/cc-codex-collaborate doctor` — One-shot diagnostics for installation, config, hooks, Codex, gates, and context. Outputs PASS/WARN/FAIL with fix suggestions.
+- `/cc-codex-collaborate rebuild-context` — Rebuild context-bundle.md for Codex review.
+- `/cc-codex-collaborate gates` — Show plan/milestone/final/safety gate status and whether each phase is allowed.
+- `/cc-codex-collaborate repair` — Auto-fix safe inconsistencies (deprecated fields, missing hooks, missing commands, recoverable milestone ID).
+- `/cc-codex-collaborate trace` — Show recent state machine events from logs, reviews, and decision log.
+- `/cc-codex-collaborate dev-smoke` — Developer self-test for JSON/shell/Python validation and core file checks.
+- `/cc-codex-collaborate codex-check` — Check Codex CLI availability (wraps existing `cccc-codex-check.sh`).
+- `cccc-doctor.py` — Diagnostic script with PASS/WARN/FAIL output.
+- `cccc-gates.py` — Gate status display script.
+- `cccc-rehydrate-state.py` — State rehydration from planning docs, reviews, and git history.
+- `cccc-reset.sh` — Reset command wrapper with backup and report.
+- `cccc-repair.sh` — Safe auto-repair script with backup.
+- `cccc-trace.py` — Event timeline script.
+- `cccc-dev-smoke.sh` — Developer smoke test script.
+- `cccc-update.sh --force` flag — Force sync regardless of version.
+- State rehydration fields: `last_state_rehydrated_at`, `last_state_rehydrate_sources`, `last_state_rehydrate_reason`, `rehydrate_confidence`.
+
+### Changed
+
+- `cccc-update.sh` now supports `--force` flag for force-update mode. Normal update skips when version is unchanged.
+- SKILL.md updated with Maintenance commands section and all new subcommands.
+- README.md / README_EN.md updated with maintenance and debugging command tables.
+- Main command template argument-hint expanded with all new subcommands.
+
 ## 0.1.12 - 2026-05-15
 
 ### Fixed

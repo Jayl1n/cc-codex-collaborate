@@ -225,7 +225,16 @@ If no known subcommand is provided, treat the arguments as the user's coding tas
 | --- | --- |
 | `/cc-codex-collaborate setup` | First-time setup. Interactive configuration wizard. Generates docs/cccc and .claude/commands. Does NOT enable hooks. |
 | `/cc-codex-collaborate update` | Safe migration after skill upgrade. Syncs config/state fields, commands, enabled hooks. Does NOT overwrite user planning/review history. Does NOT enable hooks if not already enabled. |
+| `/cc-codex-collaborate force-update` | Force sync regardless of version number. Same as update but ignores version check. |
 | `/cc-codex-collaborate resume` | Resume a paused workflow. Does NOT bypass Codex gates, safety pauses, or secret requirements. |
+| `/cc-codex-collaborate reset` / `reset state` | Reset state machine runtime state and rehydrate from docs. Does NOT delete planning docs, reviews, or logs. |
+| `/cc-codex-collaborate doctor` | Diagnose installation, config, hooks, Codex, gates, and context. Does NOT modify files. |
+| `/cc-codex-collaborate rebuild-context` | Rebuild context-bundle.md for Codex. Does NOT modify milestone status. |
+| `/cc-codex-collaborate gates` | Show plan/milestone/final/safety gate status. Does NOT modify files. |
+| `/cc-codex-collaborate repair` | Auto-fix safe inconsistencies. Backs up before modifying. Does NOT bypass Codex gates or safety pauses. |
+| `/cc-codex-collaborate trace` | Show recent state machine events. Does NOT modify files. |
+| `/cc-codex-collaborate dev-smoke` | Developer self-test for skill installation. Does NOT modify user files. |
+| `/cc-codex-collaborate codex-check` | Check Codex CLI availability. |
 | `/cc-codex-collaborate "task"` | Start user's free-form task description. Full collaboration loop. |
 | `/cc-codex-collaborate-loop-status` | Show loop/hooks/Codex gates/version status. Includes resume guidance. |
 | `/cc-codex-collaborate-loop-start` | Enable stop-hook auto-continuation. If active workflow exists, immediately continue state machine. |
@@ -239,17 +248,45 @@ When invoked with `update`, run:
 .claude/skills/cc-codex-collaborate/scripts/cccc-update.sh
 ```
 
-Update behavior:
+When invoked with `force-update`, run:
 
-- Does NOT download new skill. Assumes user already installed new version via git pull, zip, or package manager.
-- Checks if docs/cccc exists. If not, prompts user to run setup first.
-- Creates backup under `docs/cccc/backups/update-<timestamp>/`.
-- Migrates config.json: adds new template fields, preserves user settings, updates skill metadata.
-- Migrates state.json: adds new template fields, preserves runtime state, updates migration metadata.
-- Syncs commands: overwrites generated commands, preserves user-modified commands (creates .new file).
-- Syncs hooks: only if loop already enabled. Does NOT enable hooks if not already enabled.
-- Does NOT change `automation.stop_hook_loop_enabled` or `mode`.
-- Outputs migration report with version info and file changes.
+```bash
+.claude/skills/cc-codex-collaborate/scripts/cccc-update.sh --force
+```
+
+## Maintenance commands
+
+### reset / reset state
+
+Reset state machine runtime state. Run `cccc-reset.sh`. Uses `cccc-rehydrate-state.py` to infer current milestone from planning docs, reviews, and git history. Does NOT delete planning docs, reviews, or logs. Always creates backup.
+
+### doctor
+
+Diagnose installation, config, hooks, Codex, gates, and context. Run `cccc-doctor.py`. Outputs PASS/WARN/FAIL with fix suggestions. Does NOT modify files.
+
+### rebuild-context
+
+Rebuild context-bundle.md. Run `cccc-build-context.sh`. Does NOT modify milestone status or run Codex.
+
+### gates
+
+Show plan/milestone/final/safety/testing gate status. Run `cccc-gates.py`. Does NOT modify files.
+
+### repair
+
+Auto-fix safe inconsistencies: deprecated state fields, missing hooks, missing commands, recoverable milestone ID, missing context. Run `cccc-repair.sh`. Backs up before modifying. Does NOT bypass Codex gates, safety pauses, NEEDS_SECRET, SENSITIVE_OPERATION, or UNSAFE.
+
+### trace
+
+Show recent state machine events from logs, reviews, and decision log. Run `cccc-trace.py`. Does NOT modify files.
+
+### dev-smoke
+
+Developer self-test: JSON validation, shell syntax, Python compile, core file existence, script executability. Run `cccc-dev-smoke.sh`. Does NOT modify user files.
+
+### codex-check
+
+Check Codex CLI availability. Run `cccc-codex-check.sh`.
 
 ## Resume command
 

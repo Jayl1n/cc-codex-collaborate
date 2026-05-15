@@ -1,7 +1,7 @@
 # CCCC — Claude Code × Codex 协作引擎
 
 <p align="center">
-  <strong>版本</strong> 0.1.12 &nbsp;|&nbsp; <strong>代号</strong> CCCC &nbsp;|&nbsp; <strong>协议</strong> MIT
+  <strong>版本</strong> 0.1.13 &nbsp;|&nbsp; <strong>代号</strong> CCCC &nbsp;|&nbsp; <strong>协议</strong> MIT
 </p>
 
 <p align="center">
@@ -202,7 +202,16 @@ update 会在 `docs/cccc/backups/update-<timestamp>/` 下创建备份。
 /cc-codex-collaborate <任务描述>    启动完整协作流程
 /cc-codex-collaborate setup         交互式配置向导（首次使用入口）
 /cc-codex-collaborate update        安全迁移工作区（升级后同步）
+/cc-codex-collaborate force-update  强制同步（无视版本号）
 /cc-codex-collaborate resume        恢复暂停的 workflow
+/cc-codex-collaborate reset         重置状态机（从文档重新推断进度）
+/cc-codex-collaborate doctor        诊断安装/配置/hooks/Codex/gates
+/cc-codex-collaborate rebuild-context  重新生成 context-bundle
+/cc-codex-collaborate gates         显示 plan/milestone/final/safety gate 状态
+/cc-codex-collaborate repair        自动修复安全的不一致状态
+/cc-codex-collaborate trace         查看最近状态机事件
+/cc-codex-collaborate dev-smoke     开发者自测
+/cc-codex-collaborate codex-check   检查 Codex CLI 可用性
 /cc-codex-collaborate plan          生成/更新规划
 /cc-codex-collaborate plan-review   触发规划审核
 /cc-codex-collaborate run           运行当前 milestone
@@ -217,6 +226,20 @@ update 会在 `docs/cccc/backups/update-<timestamp>/` 下创建备份。
 | `/cc-codex-collaborate-loop-status` | 查看 config/state 状态、loop 模式、hooks 配置、resume 建议 |
 | `/cc-codex-collaborate-loop-start` | 启用 Stop-hook 自动续跑，如有活跃 workflow 则立即继续 |
 | `/cc-codex-collaborate-loop-stop` | 禁用 loop 自动化，移除 cccc 的 hook 注册 |
+
+### 维护与调试命令
+
+| 命令 | 作用 |
+| --- | --- |
+| `/cc-codex-collaborate force-update` | 无视版本号，强制同步当前 skill 模板到项目工作区 |
+| `/cc-codex-collaborate reset` | 重置状态机运行状态，从 docs/cccc、reviews、git log 重新推断当前进度 |
+| `/cc-codex-collaborate doctor` | 一次性诊断安装、hooks、config/state、Codex、gates、context |
+| `/cc-codex-collaborate rebuild-context` | 重新生成 Codex 使用的 context-bundle |
+| `/cc-codex-collaborate gates` | 显示 plan/milestone/final/safety gate 状态 |
+| `/cc-codex-collaborate repair` | 自动修复安全的不一致状态（备份后修复） |
+| `/cc-codex-collaborate trace` | 查看最近状态机事件 |
+| `/cc-codex-collaborate dev-smoke` | 开发者自测（JSON/shell/Python 校验） |
+| `/cc-codex-collaborate codex-check` | 检查 Codex CLI 可用性 |
 
 ## Hook 行为
 

@@ -1,7 +1,7 @@
 # CCCC — Claude Code × Codex Collaboration Engine
 
 <p align="center">
-  <strong>Version</strong> 0.1.12 &nbsp;|&nbsp; <strong>Short name</strong> CCCC &nbsp;|&nbsp; <strong>License</strong> MIT
+  <strong>Version</strong> 0.1.13 &nbsp;|&nbsp; <strong>Short name</strong> CCCC &nbsp;|&nbsp; <strong>License</strong> MIT
 </p>
 
 <p align="center">
@@ -202,7 +202,16 @@ Use `/cc-codex-collaborate-loop-status` to check whether update is recommended.
 /cc-codex-collaborate <task>       Start the full collaboration loop
 /cc-codex-collaborate setup        Interactive configuration wizard (first-time entry point)
 /cc-codex-collaborate update       Safe workspace migration (sync after upgrade)
+/cc-codex-collaborate force-update Force sync regardless of version number
 /cc-codex-collaborate resume       Resume a paused workflow
+/cc-codex-collaborate reset        Reset state machine and rehydrate from docs
+/cc-codex-collaborate doctor       Diagnose installation, config, hooks, Codex, gates, context
+/cc-codex-collaborate rebuild-context  Rebuild context-bundle.md
+/cc-codex-collaborate gates        Show plan/milestone/final/safety gate status
+/cc-codex-collaborate repair       Auto-fix safe inconsistencies
+/cc-codex-collaborate trace        Show recent state machine events
+/cc-codex-collaborate dev-smoke    Developer self-test
+/cc-codex-collaborate codex-check  Check Codex CLI availability
 /cc-codex-collaborate plan         Generate/update the plan
 /cc-codex-collaborate plan-review  Trigger plan review
 /cc-codex-collaborate run          Run the current milestone
@@ -217,6 +226,20 @@ Use `/cc-codex-collaborate-loop-status` to check whether update is recommended.
 | `/cc-codex-collaborate-loop-status` | Show config/state status, loop mode, hook configuration, and resume guidance |
 | `/cc-codex-collaborate-loop-start` | Enable Stop-hook auto-continuation; if active workflow exists, continue immediately |
 | `/cc-codex-collaborate-loop-stop` | Disable loop automation and remove CCCC hook registrations |
+
+### Maintenance and debugging commands
+
+| Command | Purpose |
+| --- | --- |
+| `/cc-codex-collaborate force-update` | Force sync skill templates to workspace regardless of version |
+| `/cc-codex-collaborate reset` | Reset state machine and rehydrate current progress from docs, reviews, and git history |
+| `/cc-codex-collaborate doctor` | Diagnose installation, hooks, config/state, Codex, gates, and context health |
+| `/cc-codex-collaborate rebuild-context` | Rebuild context-bundle.md for Codex |
+| `/cc-codex-collaborate gates` | Show plan/milestone/final/safety gate status |
+| `/cc-codex-collaborate repair` | Auto-fix safe inconsistencies (backs up before modifying) |
+| `/cc-codex-collaborate trace` | Show recent state machine events |
+| `/cc-codex-collaborate dev-smoke` | Developer self-test (JSON/shell/Python validation) |
+| `/cc-codex-collaborate codex-check` | Check Codex CLI availability |
 
 ## Hook behavior
 
