@@ -1,7 +1,7 @@
 # CCCC — Claude Code × Codex 协作引擎
 
 <p align="center">
-  <strong>版本</strong> 0.1.16 &nbsp;|&nbsp; <strong>代号</strong> CCCC &nbsp;|&nbsp; <strong>协议</strong> MIT
+  <strong>版本</strong> 0.1.17 &nbsp;|&nbsp; <strong>代号</strong> CCCC &nbsp;|&nbsp; <strong>协议</strong> MIT
 </p>
 
 <p align="center">
@@ -220,6 +220,9 @@ update 会在 `docs/cccc/backups/update-<timestamp>/` 下创建备份。
 /cccc replan           文档变化后重新规划
 /cccc bypass-codex     管理 Codex bypass（Codex 不可用时替代 review）
 /cccc codex-recheck    Codex 恢复后重新检查 bypassed gates
+/cccc codex-budget     查看 Codex 预算、策略、缓存、checkpoint
+/cccc review-now       强制立即 Codex review（当前/batch/full）
+/cccc checkpoint       管理 Codex-approved checkpoint
 /cccc reset            重置状态机（从文档重新推断进度）
 /cccc doctor           诊断安装/配置/hooks/Codex/gates
 /cccc rebuild-context  重新生成 context-bundle
@@ -362,6 +365,27 @@ Codex 恢复后，运行：
 ```
 
 高风险、关键风险、钱包、生产、真实资金场景默认禁止 bypass。
+
+## 节省 Codex 额度
+
+默认 Balanced 策略不会每个低风险 milestone 都调用 Codex：
+
+- **低风险**：每 3 个 milestone 进行一次 Codex review
+- **中风险**：每 2 个 Codex review
+- **高风险 / Critical**：每个都审
+- **Plan / Final review**：始终 Codex
+
+中间低风险步骤使用 Claude adversarial review（标记 lower assurance）。
+
+管理工具：
+
+```text
+/cccc codex-budget     # 查看预算、策略、缓存、checkpoint
+/cccc review-now       # 强制立即 Codex review
+/cccc checkpoint       # 管理 Codex-approved checkpoint
+```
+
+Codex pass 后建议 checkpoint（git commit），后续只 review 新 diff。Review cache 会避免相同 diff 重复消耗 Codex。
 
 ## 追问设计
 

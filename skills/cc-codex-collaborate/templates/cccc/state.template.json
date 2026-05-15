@@ -1,6 +1,6 @@
 {
   "skill_name": "cc-codex-collaborate",
-  "skill_version": "0.1.16",
+  "skill_version": "0.1.17",
   "workspace": "docs/cccc",
   "workspace_schema_version": 1,
   "last_migration_at": null,
@@ -50,6 +50,25 @@
   "consecutive_bypassed_gates": 0,
   "pending_codex_recheck": [],
   "lower_assurance_mode": false,
+  "codex_budget": {
+    "codex_calls_this_run": 0,
+    "codex_calls_this_phase": 0,
+    "codex_calls_by_milestone": {},
+    "last_codex_call_at": null,
+    "last_codex_call_reason": null
+  },
+  "codex_review_batch": {
+    "pending_milestones": [],
+    "last_batch_review_file": null,
+    "last_batch_review_at": null
+  },
+  "codex_review_cache": {},
+  "checkpoint": {
+    "last_codex_approved_commit": null,
+    "last_codex_reviewed_diff_base": null,
+    "last_codex_reviewed_at": null,
+    "pending_checkpoint_recommendation": false
+  },
   "created_at": "",
   "updated_at": ""
 }

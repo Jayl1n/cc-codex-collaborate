@@ -1,10 +1,10 @@
 <!-- generated-by: cc-codex-collaborate -->
 <!-- generated-file: true -->
-<!-- template-version: 0.1.16 -->
+<!-- template-version: 0.1.17 -->
 
 ---
 description: Coordinate Claude Code and Codex in a milestone-based collaboration loop. Use "setup" for first-time configuration, "update" for safe migration, "resume" to continue a paused workflow.
-argument-hint: "[task description | setup | update | force-update | resume | reset | doctor | rebuild-context | gates | repair | trace | dev-smoke | codex-check | sync-docs | diff-docs | replan | bypass-codex | codex-recheck | status | loop-status | loop-start | loop-stop]"
+argument-hint: "[task description | setup | update | force-update | resume | reset | doctor | rebuild-context | gates | repair | trace | dev-smoke | codex-check | sync-docs | diff-docs | replan | bypass-codex | codex-recheck | codex-budget | review-now | checkpoint | status | loop-status | loop-start | loop-stop]"
 ---
 
 You are activating the cc-codex-collaborate skill. Follow the instructions in `.claude/skills/cc-codex-collaborate/SKILL.md` exactly.
@@ -34,6 +34,9 @@ Parse the first argument:
   - `apply --gate=<gate> --reason=<reason>`: Apply bypass after Claude adversarial review. Creates lower-assurance artifact in docs/cccc/reviews/bypass/. Updates state to `bypassed` (NOT `pass`).
   - `off`: Disable bypass, set `strict_pause`.
 - **`codex-recheck`** — Re-check bypassed gates when Codex becomes available. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-codex-recheck.sh` then follow `===CODEX_RECHECK_REQUIRED===` instructions. Resolves pending Codex rechecks.
+- **`codex-budget`** — Show Codex review budget, policy mode, cache, and checkpoint status. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-codex-budget.py`. Does NOT modify files.
+- **`review-now`** — Force immediate Codex review. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-review-now.sh [current|batch|full]` then follow `===REVIEW_NOW_REQUIRED===` instructions.
+- **`checkpoint`** — Manage Codex-approved checkpoints. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-checkpoint.sh [status|record|commit]`.
 - **`status`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-status.sh` and summarize.
 - **`loop-status`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-loop-status.sh` and summarize.
 - **`loop-start`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-loop-start.sh`. **You MUST act on the CCCC_WORKFLOW_ACTION marker immediately. See below.**

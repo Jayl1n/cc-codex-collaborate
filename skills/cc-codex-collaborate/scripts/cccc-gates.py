@@ -181,7 +181,6 @@ def check_docs_sync_gate(st: dict):
 
 def check_testing_gate(st: dict):
     print("Testing gate:")
-    # Check if there's recent test info in context or reviews
     reviews_dir = WORKSPACE / "reviews" / "milestones"
     latest_review = None
     if reviews_dir.exists():
@@ -198,8 +197,41 @@ def check_testing_gate(st: dict):
         print(f"  No milestone review artifacts found")
 
     cont = st.get("stop_hook_continuations", 0)
-    max_cont = 10
     print(f"  Continuation budget: {cont} used")
+    print()
+
+
+def check_review_policy_gate(cfg: dict, st: dict):
+    print("Review policy gate:")
+    policy = cfg.get("codex_review_policy", {})
+    budget = st.get("codex_budget", {})
+
+    mode = policy.get("mode", "unknown")
+    calls = budget.get("codex_calls_this_run", 0)
+    max_calls = policy.get("budget", {}).get("max_codex_calls_per_run", 5)
+
+    print(f"  Policy mode: {mode}")
+    print(f"  Codex calls this run: {calls} / {max_calls}")
+    print(f"  Budget remaining: {max(0, max_calls - calls)}")
+
+    batch = st.get("codex_review_batch", {})
+    pending = batch.get("pending_milestones", [])
+    print(f"  Pending batch: {len(pending)} milestone(s)")
+
+    cache = st.get("codex_review_cache", {})
+    cache_count = len(cache) if isinstance(cache, dict) else 0
+    print(f"  Review cache entries: {cache_count}")
+
+    ckpt = st.get("checkpoint", {})
+    last_commit = ckpt.get("last_codex_approved_commit")
+    print(f"  Last Codex-approved commit: {last_commit or 'none'}")
+
+    budget_exhausted = calls >= max_calls
+    if budget_exhausted:
+        print(f"  Budget exhausted: yes")
+        print(f"  修复: 调整 budget 或使用 /cccc bypass-codex")
+    else:
+        print(f"  Budget exhausted: no")
     print()
 
 
@@ -220,6 +252,7 @@ def main():
     check_final_gate(cfg, st)
     check_safety_gate(st)
     check_docs_sync_gate(st)
+    check_review_policy_gate(cfg, st)
     check_testing_gate(st)
 
     # Next steps

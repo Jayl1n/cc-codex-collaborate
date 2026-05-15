@@ -366,6 +366,30 @@ else
   echo "  Unavailable policy: $CODEX_POLICY"
 fi
 
+REVIEW_POLICY_MODE="$(python3 -c "
+import json
+try:
+    data = json.loads(open('docs/cccc/config.json').read())
+    print(data.get('codex_review_policy', {}).get('mode', 'unknown'))
+except Exception:
+    print('unknown')
+" 2>/dev/null || echo 'unknown')"
+echo ""
+echo "CODEX_REVIEW_POLICY:"
+echo "  Review policy mode: $REVIEW_POLICY_MODE"
+if [[ "$REVIEW_POLICY_MODE" == "balanced" ]]; then
+  echo "  Low risk: Codex every 3 milestones"
+  echo "  Medium risk: Codex every 2 milestones"
+  echo "  High risk: Codex every milestone"
+  echo "  Critical: Codex every milestone"
+  echo "  Plan review: always Codex"
+  echo "  Final review: always Codex"
+  echo "  Batched review: enabled (max 3 per batch)"
+  echo "  Budget: max 5 Codex calls per run"
+  echo "  Checkpoint: suggest git commit after Codex pass"
+  echo "  Cache: reuse matching fingerprints"
+fi
+
 echo ""
 echo "===END_SETUP_RESULT==="
 

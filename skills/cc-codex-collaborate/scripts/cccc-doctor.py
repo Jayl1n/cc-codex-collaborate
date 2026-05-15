@@ -368,6 +368,57 @@ def check_codex_bypass():
         record(WARN, "reviews/bypass/ directory missing")
 
 
+def check_review_policy():
+    cfg = read_json(WORKSPACE / "config.json")
+    st = read_json(WORKSPACE / "state.json")
+    if not cfg:
+        return
+
+    policy = cfg.get("codex_review_policy")
+    if not policy:
+        record(WARN, "codex_review_policy missing from config", "运行 /cccc force-update 补齐配置")
+        return
+
+    mode = policy.get("mode", "unknown")
+    record(PASS, f"codex_review_policy.mode = {mode}")
+
+    budget_cfg = policy.get("budget", {})
+    max_calls = budget_cfg.get("max_codex_calls_per_run", 5)
+    record(PASS, f"  max_codex_calls_per_run = {max_calls}")
+
+    if st:
+        budget = st.get("codex_budget", {})
+        calls = budget.get("codex_calls_this_run", 0)
+        if calls > max_calls:
+            record(FAIL, f"codex_calls_this_run ({calls}) exceeds max ({max_calls})")
+        elif calls >= max_calls - 1:
+            record(WARN, f"codex_calls_this_run ({calls}) approaching max ({max_calls})",
+                   "Consider using /cccc codex-budget to review usage")
+        else:
+            record(PASS, f"  codex_calls_this_run = {calls}")
+
+        cache = st.get("codex_review_cache", {})
+        cache_count = len(cache) if isinstance(cache, dict) else 0
+        record(PASS, f"  review cache entries: {cache_count}")
+
+        batch = st.get("codex_review_batch", {})
+        pending = batch.get("pending_milestones", [])
+        if len(pending) > 3:
+            record(WARN, f"pending batch has {len(pending)} milestones",
+                   "Run /cccc review-now batch to review them")
+        else:
+            record(PASS, f"  pending batch: {len(pending)} milestone(s)")
+
+        ckpt = st.get("checkpoint", {})
+        last_commit = ckpt.get("last_codex_approved_commit")
+        rec = ckpt.get("pending_checkpoint_recommendation", False)
+        if rec:
+            record(WARN, "Checkpoint recommendation pending", "Run /cccc checkpoint record or commit")
+        if not last_commit:
+            record(WARN, "No Codex-approved checkpoint recorded",
+                   "Run /cccc checkpoint after Codex review passes")
+
+
 def check_context():
     ctx_path = WORKSPACE / "context-bundle.md"
     if not ctx_path.exists():
@@ -416,6 +467,7 @@ def main():
     check_codex()
     check_docs_sync()
     check_codex_bypass()
+    check_review_policy()
     check_context()
 
     # Output results

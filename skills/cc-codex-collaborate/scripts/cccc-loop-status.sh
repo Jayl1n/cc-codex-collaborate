@@ -228,6 +228,20 @@ if [[ "$LOWER_ASSURANCE" == "True" ]]; then
   echo "  recommended: /cccc codex-recheck (when Codex available)"
 fi
 
+# ── Codex budget ──
+
+echo ""
+echo "Codex budget:"
+REVIEW_POLICY_MODE="$(json_value "$CONFIG" '.codex_review_policy.mode' 'unknown')"
+CODEX_CALLS="$(jq -r '.codex_budget.codex_calls_this_run // 0' "$STATE" 2>/dev/null || echo '0')"
+MAX_CALLS="$(json_value "$CONFIG" '.codex_review_policy.budget.max_codex_calls_per_run' '5')"
+PENDING_BATCH="$(jq -r '.codex_review_batch.pending_milestones // [] | length' "$STATE" 2>/dev/null || echo '0')"
+LAST_COMMIT="$(jq -r '.checkpoint.last_codex_approved_commit // "none"' "$STATE" 2>/dev/null || echo 'none')"
+echo "  review policy mode: $REVIEW_POLICY_MODE"
+echo "  calls this run: $CODEX_CALLS / $MAX_CALLS"
+echo "  pending batch: $PENDING_BATCH milestone(s)"
+echo "  last approved commit: $LAST_COMMIT"
+
 # ── Resume guidance ──
 
 echo ""

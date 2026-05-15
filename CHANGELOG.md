@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.1.17 - 2026-05-15
+
+### Added
+
+- Codex review budget and frequency policy: Strict, Balanced (default), Budget, Manual, Custom.
+- Risk-based Codex review scheduling: frequency varies by risk level.
+- Batched Codex review for low/medium-risk milestones.
+- Review fingerprint cache to avoid duplicate Codex calls on identical diffs.
+- Checkpoint support: review only diffs since last Codex-approved commit.
+- `/cc-codex-collaborate codex-budget` and `/cccc codex-budget` — show budget, policy, cache, checkpoint.
+- `/cc-codex-collaborate review-now` and `/cccc review-now` — force immediate Codex review.
+- `/cc-codex-collaborate checkpoint` and `/cccc checkpoint` — manage checkpoints (status, record, commit).
+- `cccc-review-policy.py` — review decision engine based on risk, budget, cache, and triggers.
+- `cccc-review-fingerprint.py` — fingerprint computation and cache management.
+- `cccc-codex-budget.py` — budget display command.
+- `cccc-review-now.sh` — force review command.
+- `cccc-checkpoint.sh` — checkpoint management command.
+- `config.codex_review_policy` section with review frequency, triggers, budget, batching, fallback, cache, and checkpoint settings.
+- State fields: `codex_budget`, `codex_review_batch`, `codex_review_cache`, `checkpoint`.
+- Doctor checks: review policy existence, budget usage, cache entries, pending batch, checkpoint status.
+- Gates output: review policy gate with budget, cache, and checkpoint status.
+- Loop-status shows Codex budget and policy mode.
+- Setup summary shows Codex review policy details.
+- Update migrates codex_review_policy config and state fields.
+
+### Changed
+
+- SKILL.md updated with Codex Review Budget and Frequency section, new commands.
+- README.md and README_EN.md updated with Reducing Codex Quota Usage sections.
+- Command templates updated with codex-budget, review-now, checkpoint routing.
+- Codex review scripts should consult cccc-review-policy.py before calling Codex.
+
 ## 0.1.16 - 2026-05-15
 
 ### Added

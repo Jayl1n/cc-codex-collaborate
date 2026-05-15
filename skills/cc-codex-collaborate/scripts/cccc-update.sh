@@ -211,6 +211,108 @@ else:
     print('state.json not found, skipping state migration.')
 PYB
 
+# ── Migrate codex_review_policy ──
+
+echo ""
+echo "Checking codex_review_policy..."
+
+python3 - <<'POL'
+import json
+from pathlib import Path
+
+cfg_path = Path('docs/cccc/config.json')
+cfg = json.loads(cfg_path.read_text())
+
+if 'codex_review_policy' not in cfg:
+    cfg['codex_review_policy'] = {
+        "mode": "balanced",
+        "review_frequency": {
+            "low_risk_every_n_milestones": 3,
+            "medium_risk_every_n_milestones": 2,
+            "high_risk_every_n_milestones": 1,
+            "critical_risk_every_n_milestones": 1
+        },
+        "review_triggers": {
+            "always_review_plan": True,
+            "always_review_final": True,
+            "review_on_phase_boundary": True,
+            "review_on_architecture_change": True,
+            "review_on_stack_change": True,
+            "review_on_security_change": True,
+            "review_on_large_diff": True,
+            "large_diff_lines": 800,
+            "large_changed_files": 12
+        },
+        "budget": {
+            "max_codex_calls_per_run": 5,
+            "max_codex_calls_per_milestone": 1,
+            "max_codex_calls_per_phase": 8,
+            "warn_when_remaining_calls_lte": 1
+        },
+        "batching": {
+            "enabled": True,
+            "max_milestones_per_codex_review": 3,
+            "require_codex_at_phase_boundary": True
+        },
+        "fallback": {
+            "use_claude_adversarial_between_codex_reviews": True,
+            "mark_lower_assurance_until_codex_review": True,
+            "require_codex_recheck_later": True
+        },
+        "cache": {
+            "enabled": True,
+            "reuse_review_when_fingerprint_matches": True,
+            "fingerprint_includes_diff": True,
+            "fingerprint_includes_acceptance_criteria": True
+        },
+        "checkpoint": {
+            "enabled": True,
+            "prefer_review_since_last_codex_approved_commit": True,
+            "suggest_git_commit_after_codex_pass": True,
+            "auto_commit": False
+        }
+    }
+    cfg_path.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + '\n')
+    print('Added codex_review_policy config.')
+else:
+    print('codex_review_policy already present.')
+
+st_path = Path('docs/cccc/state.json')
+if st_path.exists():
+    st = json.loads(st_path.read_text())
+    new_fields = {
+        'codex_budget': {
+            'codex_calls_this_run': 0,
+            'codex_calls_this_phase': 0,
+            'codex_calls_by_milestone': {},
+            'last_codex_call_at': None,
+            'last_codex_call_reason': None
+        },
+        'codex_review_batch': {
+            'pending_milestones': [],
+            'last_batch_review_file': None,
+            'last_batch_review_at': None
+        },
+        'codex_review_cache': {},
+        'checkpoint': {
+            'last_codex_approved_commit': None,
+            'last_codex_reviewed_diff_base': None,
+            'last_codex_reviewed_at': None,
+            'pending_checkpoint_recommendation': False
+        }
+    }
+    added = []
+    for k, v in new_fields.items():
+        if k not in st:
+            st[k] = v
+            added.append(k)
+    if added:
+        st_path.write_text(json.dumps(st, ensure_ascii=False, indent=2) + '\n')
+        print(f'Added state fields: {", ".join(added)}')
+    else:
+        print('State budget/cache/checkpoint fields already present.')
+POL
+
 # ── Sync commands ──
 
 echo ""

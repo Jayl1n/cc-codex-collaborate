@@ -1,6 +1,6 @@
 ---
 name: cc-codex-collaborate
-version: 0.1.16
+version: 0.1.17
 description: Coordinate Claude Code and Codex in a milestone-based collaboration loop. Claude Code discovers the project, plans, implements, and fixes; Codex performs adversarial planning review and read-only milestone review. Working documents are stored under docs/cccc.
 argument-hint: "[task description]"
 ---
@@ -217,6 +217,9 @@ Interpret the first argument after `/cc-codex-collaborate` as a subcommand when 
 - `replan`: run `scripts/cccc-replan.sh` to re-read project and docs, update planning, and run Codex adversarial plan review.
 - `bypass-codex`: run `python3 scripts/cccc-bypass-codex.py` to manage Codex bypass. Subcommands: `status`, `once`, `apply`, `off`.
 - `codex-recheck`: run `scripts/cccc-codex-recheck.sh` to re-check bypassed gates when Codex becomes available.
+- `codex-budget`: run `python3 scripts/cccc-codex-budget.py` to show Codex review budget and policy.
+- `review-now`: run `scripts/cccc-review-now.sh` to force immediate Codex review for current milestone or batch.
+- `checkpoint`: run `scripts/cccc-checkpoint.sh` to manage Codex-approved checkpoints. Subcommands: status, record, commit.
 - `status`: run `scripts/cccc-status.sh` and summarize.
 - `loop-status`: run `scripts/cccc-loop-status.sh` and summarize.
 - `loop-start`: run `scripts/cccc-loop-start.sh` and summarize.
@@ -242,7 +245,10 @@ Short aliases: `/cccc` = `/cc-codex-collaborate`, `/cccc-loop-status` = `/cc-cod
 | `/cc-codex-collaborate replan` | Re-read project, update planning, run Codex adversarial plan review. |
 | `/cc-codex-collaborate bypass-codex` | Manage Codex bypass. Subcommands: status, once, apply, off. Generates lower-assurance Claude adversarial review. |
 | `/cc-codex-collaborate codex-recheck` | Re-check bypassed gates when Codex becomes available. Resolves pending rechecks. |
-| `/cc-codex-collaborate gates` | Show plan/milestone/final/safety/docs-sync gate status. Shows bypass status. Does NOT modify files. |
+| `/cc-codex-collaborate codex-budget` | Show Codex review budget, policy, cache, and checkpoint status. Does NOT modify files. |
+| `/cc-codex-collaborate review-now` | Force immediate Codex review for current milestone or pending batch. |
+| `/cc-codex-collaborate checkpoint` | Manage Codex-approved checkpoints. Subcommands: status, record, commit. |
+| `/cc-codex-collaborate gates` | Show plan/milestone/final/safety/docs-sync/review-policy gate status. Shows bypass status. Does NOT modify files. |
 | `/cc-codex-collaborate repair` | Auto-fix safe inconsistencies. Backs up before modifying. Does NOT bypass Codex gates or safety pauses. |
 | `/cc-codex-collaborate trace` | Show recent state machine events. Does NOT modify files. |
 | `/cc-codex-collaborate dev-smoke` | Developer self-test for skill installation. Does NOT modify user files. |
@@ -930,3 +936,74 @@ Bypass is NEVER allowed for:
 - Production deployments
 - Destructive operations
 - Critical risk scenarios
+
+## Codex Review Budget and Frequency
+
+Codex review frequency is controlled by `config.codex_review_policy`.
+
+Rules:
+
+1. Do not call Codex for obvious local failures before Claude fixes them.
+2. Use the smallest sufficient review level (self-check, adversarial, targeted, full context).
+3. Use targeted or diff-only context when full context is unnecessary.
+4. Use batched Codex review for low-risk milestones when policy allows.
+5. Use Claude adversarial review between Codex reviews when policy allows.
+6. Mark Claude-only reviews as lower assurance.
+7. High-risk and critical-risk changes must not silently bypass Codex.
+8. Use review fingerprint cache to avoid repeated Codex calls on identical diffs.
+9. Prefer reviewing diff since last Codex-approved checkpoint.
+
+### Review levels
+
+| Level | Codex? | Description |
+| --- | --- | --- |
+| `claude_self_check` | No | Claude self-check only |
+| `claude_adversarial` | No | Claude adversarial review (lower assurance) |
+| `codex_targeted` | Yes | Codex reviews targeted diff + tests |
+| `codex_full_context` | Yes | Codex reviews full context bundle |
+
+### Review frequency by risk
+
+| Risk | Default frequency |
+| --- | --- |
+| Low | Every 3 milestones (Balanced), every 5 (Budget) |
+| Medium | Every 2 milestones |
+| High | Every milestone |
+| Critical | Every milestone |
+| Plan review | Always Codex |
+| Final review | Always Codex |
+
+### codex-budget command
+
+```bash
+python3 .claude/skills/cc-codex-collaborate/scripts/cccc-codex-budget.py
+```
+
+Shows: policy mode, calls this run, pending batch, checkpoint status, recommendations.
+
+### review-now command
+
+```bash
+.claude/skills/cc-codex-collaborate/scripts/cccc-review-now.sh [current|batch|full]
+```
+
+Forces immediate Codex review. Does not bypass safety limits.
+
+### checkpoint command
+
+```bash
+.claude/skills/cc-codex-collaborate/scripts/cccc-checkpoint.sh [status|record|commit]
+```
+
+- `status`: Show checkpoint status and diff since last approved commit.
+- `record`: Record current HEAD as Codex-approved checkpoint (no git commit).
+- `commit`: Create a git checkpoint commit after user confirmation.
+
+### review-policy decision script
+
+Before each review, run:
+```bash
+python3 .claude/skills/cc-codex-collaborate/scripts/cccc-review-policy.py --gate=<gate>
+```
+
+Returns decision: `run_codex_full_context`, `run_codex_targeted`, `skip_codex_use_claude_adversarial`, `batch_pending`, `cache_hit`, `budget_exhausted`.

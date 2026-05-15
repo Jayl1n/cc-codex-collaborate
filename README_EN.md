@@ -1,7 +1,7 @@
 # CCCC — Claude Code × Codex Collaboration Engine
 
 <p align="center">
-  <strong>Version</strong> 0.1.16 &nbsp;|&nbsp; <strong>Short name</strong> CCCC &nbsp;|&nbsp; <strong>License</strong> MIT
+  <strong>Version</strong> 0.1.17 &nbsp;|&nbsp; <strong>Short name</strong> CCCC &nbsp;|&nbsp; <strong>License</strong> MIT
 </p>
 
 <p align="center">
@@ -220,6 +220,9 @@ Short aliases call the same scripts and behave identically to full commands. The
 /cccc replan            Re-plan after documentation changes
 /cccc bypass-codex      Manage Codex bypass (alternative review when Codex unavailable)
 /cccc codex-recheck     Re-check bypassed gates when Codex becomes available
+/cccc codex-budget      Show Codex review budget, policy, cache, checkpoint
+/cccc review-now        Force immediate Codex review (current/batch/full)
+/cccc checkpoint        Manage Codex-approved checkpoints
 /cccc reset             Reset state machine and rehydrate from docs
 /cccc doctor            Diagnose installation, config, hooks, Codex, gates, context
 /cccc rebuild-context   Rebuild context-bundle.md
@@ -286,6 +289,27 @@ Manage bypass:
 ```
 
 High-risk, critical-risk, wallet, production, and real-money scenarios cannot be bypassed by default.
+
+## Reducing Codex Quota Usage
+
+The default Balanced policy does not call Codex for every low-risk milestone:
+
+- **Low risk**: Codex review every 3 milestones
+- **Medium risk**: Codex review every 2 milestones
+- **High risk / Critical**: Codex review every milestone
+- **Plan / Final review**: Always Codex
+
+Intermediate low-risk steps use Claude adversarial review (marked lower assurance).
+
+Management tools:
+
+```text
+/cccc codex-budget     # View budget, policy, cache, checkpoint
+/cccc review-now       # Force immediate Codex review
+/cccc checkpoint       # Manage Codex-approved checkpoints
+```
+
+After Codex passes, create a checkpoint (git commit). Future reviews only cover new diff. Review cache avoids redundant Codex calls on identical diffs.
 
 ## Hook behavior
 

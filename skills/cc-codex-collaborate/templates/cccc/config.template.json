@@ -1,11 +1,11 @@
 {
   "skill": {
     "name": "cc-codex-collaborate",
-    "installed_version": "0.1.16",
+    "installed_version": "0.1.17",
     "workspace_schema_version": 1,
     "last_updated_at": null
   },
-  "version": "0.1.16",
+  "version": "0.1.17",
   "language": {
     "user_language": "auto",
     "auto_detect": true
@@ -103,5 +103,53 @@
       "risk-register.md",
       "open-questions.md"
     ]
+  },
+  "codex_review_policy": {
+    "mode": "balanced",
+    "review_frequency": {
+      "low_risk_every_n_milestones": 3,
+      "medium_risk_every_n_milestones": 2,
+      "high_risk_every_n_milestones": 1,
+      "critical_risk_every_n_milestones": 1
+    },
+    "review_triggers": {
+      "always_review_plan": true,
+      "always_review_final": true,
+      "review_on_phase_boundary": true,
+      "review_on_architecture_change": true,
+      "review_on_stack_change": true,
+      "review_on_security_change": true,
+      "review_on_large_diff": true,
+      "large_diff_lines": 800,
+      "large_changed_files": 12
+    },
+    "budget": {
+      "max_codex_calls_per_run": 5,
+      "max_codex_calls_per_milestone": 1,
+      "max_codex_calls_per_phase": 8,
+      "warn_when_remaining_calls_lte": 1
+    },
+    "batching": {
+      "enabled": true,
+      "max_milestones_per_codex_review": 3,
+      "require_codex_at_phase_boundary": true
+    },
+    "fallback": {
+      "use_claude_adversarial_between_codex_reviews": true,
+      "mark_lower_assurance_until_codex_review": true,
+      "require_codex_recheck_later": true
+    },
+    "cache": {
+      "enabled": true,
+      "reuse_review_when_fingerprint_matches": true,
+      "fingerprint_includes_diff": true,
+      "fingerprint_includes_acceptance_criteria": true
+    },
+    "checkpoint": {
+      "enabled": true,
+      "prefer_review_since_last_codex_approved_commit": true,
+      "suggest_git_commit_after_codex_pass": true,
+      "auto_commit": false
+    }
   }
 }
