@@ -69,6 +69,10 @@
     "last_codex_reviewed_at": null,
     "pending_checkpoint_recommendation": false
   },
+  "curation_status": "not_run",
+  "last_curation_at": null,
+  "pending_inbox_sources": 0,
+  "curation_requires_replan": false,
   "created_at": "",
   "updated_at": ""
 }

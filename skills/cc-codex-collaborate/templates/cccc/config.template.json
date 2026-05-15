@@ -151,5 +151,16 @@
       "suggest_git_commit_after_codex_pass": true,
       "auto_commit": false
     }
+  },
+  "curation": {
+    "enabled": true,
+    "inbox_path": "docs/cccc/inbox",
+    "canonical_path": "docs/cccc/canonical",
+    "product_path": "docs/cccc/product",
+    "archive_path": "docs/cccc/archive",
+    "max_file_bytes": 1048576,
+    "require_human_confirmation_for_conflicts": true,
+    "auto_archive_irrelevant": true,
+    "source_of_truth": "canonical"
   }
 }

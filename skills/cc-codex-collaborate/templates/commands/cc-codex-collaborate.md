@@ -1,10 +1,10 @@
 <!-- generated-by: cc-codex-collaborate -->
 <!-- generated-file: true -->
-<!-- template-version: 0.1.17 -->
+<!-- template-version: 0.1.19 -->
 
 ---
 description: Coordinate Claude Code and Codex in a milestone-based collaboration loop. Use "setup" for first-time configuration, "update" for safe migration, "resume" to continue a paused workflow.
-argument-hint: "[task description | setup | update | force-update | resume | reset | doctor | rebuild-context | gates | repair | trace | dev-smoke | codex-check | sync-docs | diff-docs | replan | bypass-codex | codex-recheck | codex-budget | review-now | checkpoint | status | loop-status | loop-start | loop-stop]"
+argument-hint: "[task description | setup | update | force-update | resume | reset | doctor | rebuild-context | gates | repair | trace | dev-smoke | codex-check | sync-docs | diff-docs | replan | bypass-codex | codex-recheck | codex-budget | review-now | checkpoint | ingest-docs | sync-inbox | curate-docs | distill-project | status | loop-status | loop-start | loop-stop]"
 ---
 
 You are activating the cc-codex-collaborate skill. Follow the instructions in `.claude/skills/cc-codex-collaborate/SKILL.md` exactly.
@@ -37,6 +37,10 @@ Parse the first argument:
 - **`codex-budget`** — Show Codex review budget, policy mode, cache, and checkpoint status. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-codex-budget.py`. Does NOT modify files.
 - **`review-now`** — Force immediate Codex review. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-review-now.sh [current|batch|full]` then follow `===REVIEW_NOW_REQUIRED===` instructions.
 - **`checkpoint`** — Manage Codex-approved checkpoints. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-checkpoint.sh [status|record|commit]`.
+- **`ingest-docs`** — Import external docs to inbox. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-ingest-docs.sh [paths...]`. Does NOT modify canonical docs.
+- **`sync-inbox`** — Discover inbox document changes. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-sync-inbox.py [--json]`. Updates source-index.json only.
+- **`curate-docs`** — Classify and extract engineering content from raw docs. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-curate-docs.py [status|report|apply]`. If `SYNC_AWAITING_DECISION=true`, ask the user with brainstorm-style options. Updates canonical docs only after user confirmation.
+- **`distill-project`** — Rebuild project state from all sources. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-distill-project.sh`. Must ask user to confirm conflicts. Recommend `/cccc replan` after completion.
 - **`status`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-status.sh` and summarize.
 - **`loop-status`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-loop-status.sh` and summarize.
 - **`loop-start`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-loop-start.sh`. **You MUST act on the CCCC_WORKFLOW_ACTION marker immediately. See below.**

@@ -147,6 +147,26 @@ print(f'User decision: {decision}')
     echo "doc-index.json or state.json not found. Cannot determine doc change status."
   fi
 
+  echo "\n## Curation Summary"
+  if [[ -f docs/cccc/source-index.json ]] && [[ -f docs/cccc/curation-state.json ]]; then
+    python3 -c "
+import json
+idx = json.loads(open('docs/cccc/source-index.json').read())
+cs = json.loads(open('docs/cccc/curation-state.json').read())
+total = len(idx.get('sources', {}))
+pending = sum(1 for s in idx.get('sources', {}).values() if s.get('requires_curation') and s.get('status') not in ('deleted','archived','ignored'))
+print(f'Total inbox sources: {total}')
+print(f'Pending curation: {pending}')
+print(f'Pending conflicts: {len(cs.get(\"pending_conflicts\", []))}')
+print(f'Canonical docs dirty: {cs.get(\"canonical_docs_dirty\", False)}')
+print(f'Requires replan: {cs.get(\"requires_replan\", False)}')
+print(f'Last curated: {cs.get(\"last_curated_at\", \"never\")}')
+print(f'Source of truth: canonical docs (raw notes are evidence, not authority)')
+" 2>/dev/null || echo "Cannot read curation state."
+  else
+    echo "Curation files not found. Run /cccc setup or /cccc update first."
+  fi
+
 } > "$OUT"
 
 echo "$OUT"

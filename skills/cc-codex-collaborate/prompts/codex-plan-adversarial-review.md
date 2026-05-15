@@ -52,3 +52,13 @@ Document change rules:
 - If stack changed (e.g., MySQL to PostgreSQL, Express to Next.js), require updated roadmap, test strategy, and risk register.
 - Do not approve a plan if documentation changes invalidate previous assumptions.
 - If context says `planning_invalidated_by_doc_change = true`, do not approve implementation until the plan has been updated and reviewed.
+
+Curation rules:
+
+- Treat canonical docs (`docs/cccc/canonical/`) as authoritative project planning input.
+- Treat inbox/raw notes (`docs/cccc/inbox/`) as non-authoritative evidence only.
+- If raw notes disagree with canonical docs, ask for curation (`/cccc curate-docs`) instead of approving implementation.
+- If product/business notes (`docs/cccc/product/`) are not mapped to engineering requirements, do not convert them into milestones.
+- If architecture decisions were curated from raw notes, verify that roadmap, test strategy, and risk register reflect them.
+- Do not approve implementation from raw discussion notes alone — they must be curated into canonical docs first.
+- If curation summary shows `requires_replan = true` or `pending_conflicts > 0`, do not approve the plan.

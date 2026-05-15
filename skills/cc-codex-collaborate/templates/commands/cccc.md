@@ -1,11 +1,11 @@
 <!-- generated-by: cc-codex-collaborate -->
 <!-- generated-file: true -->
-<!-- template-version: 0.1.17 -->
+<!-- template-version: 0.1.19 -->
 <!-- alias-for: cc-codex-collaborate -->
 
 ---
 description: "Alias for /cc-codex-collaborate. Coordinate Claude Code and Codex in a milestone-based collaboration loop."
-argument-hint: "[task description | setup | update | force-update | resume | reset | doctor | rebuild-context | gates | repair | trace | dev-smoke | codex-check | sync-docs | diff-docs | replan | bypass-codex | codex-recheck | codex-budget | review-now | checkpoint | status | loop-status | loop-start | loop-stop]"
+argument-hint: "[task description | setup | update | force-update | resume | reset | doctor | rebuild-context | gates | repair | trace | dev-smoke | codex-check | sync-docs | diff-docs | replan | bypass-codex | codex-recheck | codex-budget | review-now | checkpoint | ingest-docs | sync-inbox | curate-docs | distill-project | status | loop-status | loop-start | loop-stop]"
 ---
 
 This is a short alias for `/cc-codex-collaborate`. Follow the instructions in `.claude/skills/cc-codex-collaborate/SKILL.md` exactly.
@@ -34,6 +34,10 @@ Parse the first argument:
 - **`codex-budget`** — Show Codex review budget and policy. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-codex-budget.py`. Does NOT modify files.
 - **`review-now`** — Force immediate Codex review. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-review-now.sh [current|batch|full]`.
 - **`checkpoint`** — Manage checkpoints. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-checkpoint.sh [status|record|commit]`.
+- **`ingest-docs`** — Import external docs to inbox. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-ingest-docs.sh [paths...]`.
+- **`sync-inbox`** — Discover inbox document changes. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-sync-inbox.py [--json]`.
+- **`curate-docs`** — Classify and extract engineering content from raw docs. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-curate-docs.py [status|report|apply]`.
+- **`distill-project`** — Rebuild project state from all sources. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-distill-project.sh`.
 - **`status`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-status.sh` and summarize.
 - **`loop-status`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-loop-status.sh` and summarize.
 - **`loop-start`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-loop-start.sh`. **You MUST act on the CCCC_WORKFLOW_ACTION marker immediately. See below.**

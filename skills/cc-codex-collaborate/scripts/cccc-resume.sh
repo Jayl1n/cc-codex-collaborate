@@ -42,7 +42,7 @@ PREVIOUS_STATUS="$(jq -r '.previous_status // empty' "$STATE")"
 
 # ── Check if resumable ──
 
-RESUMABLE_STATUSES="PAUSED_FOR_HUMAN NEEDS_HUMAN PAUSED_FOR_SYSTEM PAUSED_FOR_CODEX NEEDS_SECRET SENSITIVE_OPERATION UNSAFE FAIL_UNCLEAR REVIEW_THRESHOLD_EXCEEDED NEEDS_REPLAN"
+RESUMABLE_STATUSES="PAUSED_FOR_HUMAN NEEDS_HUMAN PAUSED_FOR_SYSTEM PAUSED_FOR_CODEX NEEDS_SECRET SENSITIVE_OPERATION UNSAFE FAIL_UNCLEAR REVIEW_THRESHOLD_EXCEEDED NEEDS_REPLAN NEEDS_CURATION"
 
 is_resumable() {
   local s="$1"
@@ -316,6 +316,25 @@ case "$STATUS" in
     echo "Default recommendation: A (replan)"
     if [[ "$STRATEGY" == "replan" || "$STRATEGY" == "recommended" ]]; then
       echo "Strategy: replan (option A)"
+    fi
+    ;;
+
+  NEEDS_CURATION)
+    echo "## Resume guidance: NEEDS_CURATION"
+    echo ""
+    echo "The workflow requires curation before implementation can continue."
+    echo "Raw/inbox documents have changed and need to be curated into canonical docs."
+    echo ""
+    echo "Options:"
+    echo "  A. Run /cccc curate-docs to process inbox documents"
+    echo "  B. Run /cccc sync-inbox to discover new documents first"
+    echo "  C. Run /cccc distill-project for full project rebuild"
+    echo "  D. Ignore curation and continue old workflow (not recommended)"
+    echo "  E. Free-form input"
+    echo ""
+    echo "Default recommendation: A (curate-docs)"
+    if [[ "$STRATEGY" == "curate" || "$STRATEGY" == "recommended" ]]; then
+      echo "Strategy: curate-docs (option A)"
     fi
     ;;
 esac

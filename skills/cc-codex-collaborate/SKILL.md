@@ -1,6 +1,6 @@
 ---
 name: cc-codex-collaborate
-version: 0.1.18
+version: 0.1.19
 description: Coordinate Claude Code and Codex in a milestone-based collaboration loop. Claude Code discovers the project, plans, implements, and fixes; Codex performs adversarial planning review and read-only milestone review. Working documents are stored under docs/cccc.
 argument-hint: "[task description]"
 ---
@@ -31,6 +31,8 @@ These rules are non-negotiable and apply at all times:
 8. **Detect and use the user's primary language** throughout all human-facing output.
 9. **Context bundle before every Codex call** — regenerate `docs/cccc/context-bundle.md`.
 10. **Bypass is NOT pass** — `bypassed` gate status indicates lower assurance.
+11. **Raw notes are evidence, not authority** — inbox docs cannot directly drive code implementation.
+12. **Canonical docs are authority** — code must follow curated canonical docs, not raw discussion notes.
 
 ## Documentation loading map
 
@@ -45,6 +47,7 @@ Detailed behavior rules are split into focused documents. Load them as needed:
 | `docs/codex-bypass.md` | Codex bypass mode, Claude adversarial bypass review, recheck | Codex unavailable or bypass-codex/codex-recheck commands |
 | `docs/codex-budget.md` | Review budget/frequency, fingerprint cache, checkpoint, review-policy | Review scheduling or budget/cache/checkpoint commands |
 | `docs/docs-sync.md` | Manual documentation sync, sync-docs, diff-docs, replan | sync-docs, diff-docs, replan commands |
+| `docs/docs-curation.md` | Docs curation pipeline, ingest-docs, sync-inbox, curate-docs, distill-project, raw vs canonical rules | Curation commands or inbox management |
 | `docs/testing-policy.md` | Thresholds, quality gates, language detection, modes | Any threshold or quality gate check |
 | `docs/maintenance.md` | Reset, doctor, rebuild-context, gates, repair, trace, dev-smoke, codex-check, resume | Any maintenance subcommand |
 | `docs/hooks.md` | Stop hook automation rule, loop control commands | loop-start, loop-stop, or stop hook behavior |
@@ -72,6 +75,10 @@ Parse the first argument to determine the action:
 - **`sync-docs`** → Load `docs/docs-sync.md`. Detect and sync doc changes.
 - **`diff-docs`** → Load `docs/docs-sync.md`. Read-only doc change check.
 - **`replan`** → Load `docs/docs-sync.md` and `docs/codex-review.md`. Re-plan project.
+- **`ingest-docs`** → Load `docs/docs-curation.md`. Import external docs to inbox.
+- **`sync-inbox`** → Load `docs/docs-curation.md`. Discover inbox document changes.
+- **`curate-docs`** → Load `docs/docs-curation.md`. Classify and extract engineering content from raw docs.
+- **`distill-project`** → Load `docs/docs-curation.md`. Rebuild project state from all sources.
 - **`bypass-codex`** → Load `docs/codex-bypass.md`. Manage Codex bypass.
 - **`codex-recheck`** → Load `docs/codex-bypass.md`. Re-check bypassed gates.
 - **`codex-budget`** → Load `docs/codex-budget.md`. Show review budget.
@@ -92,6 +99,7 @@ After running cccc-loop-start.sh, check the CCCC_WORKFLOW_ACTION marker in the o
 - **`needs_task`** — No active workflow. Tell the user to run `/cccc "task description"`.
 - **`needs_replan`** — Planning invalidated by doc changes. Tell the user to run `/cccc replan`.
 - **`needs_sync_docs`** — Documents changed since last sync. Tell the user to run `/cccc sync-docs`.
+- **`needs_curation`** — Raw/curated docs changed and require curation or replan. Tell the user to run `/cccc curate-docs` or `/cccc distill-project`.
 - **`done`** — The workflow is already completed. Tell the user to start a new task.
 
 **For `continue_now`: You are NOT done after running the loop-start script. The script output tells you to continue. Continuing means executing state machine steps NOW, not waiting for the stop hook.**

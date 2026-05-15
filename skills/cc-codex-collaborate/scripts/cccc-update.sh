@@ -313,6 +313,66 @@ if st_path.exists():
         print('State budget/cache/checkpoint fields already present.')
 POL
 
+# ── Migrate curation fields ──
+
+echo ""
+echo "Checking curation fields..."
+
+python3 - <<'CUR'
+import json
+from pathlib import Path
+
+cfg_path = Path('docs/cccc/config.json')
+cfg = json.loads(cfg_path.read_text())
+if 'curation' not in cfg:
+    cfg['curation'] = {
+        "enabled": True,
+        "inbox_path": "docs/cccc/inbox",
+        "canonical_path": "docs/cccc/canonical",
+        "product_path": "docs/cccc/product",
+        "archive_path": "docs/cccc/archive",
+        "max_file_bytes": 1048576,
+        "require_human_confirmation_for_conflicts": True,
+        "auto_archive_irrelevant": True,
+        "source_of_truth": "canonical"
+    }
+    cfg_path.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + '\n')
+    print('Added curation config.')
+else:
+    print('Curation config already present.')
+
+st_path = Path('docs/cccc/state.json')
+if st_path.exists():
+    st = json.loads(st_path.read_text())
+    curation_fields = {
+        'curation_status': 'not_run',
+        'last_curation_at': None,
+        'pending_inbox_sources': 0,
+        'curation_requires_replan': False,
+    }
+    added = []
+    for k, v in curation_fields.items():
+        if k not in st:
+            st[k] = v
+            added.append(k)
+    if added:
+        st_path.write_text(json.dumps(st, ensure_ascii=False, indent=2) + '\n')
+        print(f'Added state curation fields: {", ".join(added)}')
+
+for idx_name, default in [
+    ('source-index', {"version": 1, "last_synced_at": None, "sources": {}}),
+    ('source-map', {"version": 1, "last_updated_at": None, "mappings": []}),
+    ('curation-state', {"version": 1, "last_curated_at": None, "pending_sources": [], "pending_conflicts": [], "pending_questions": [], "canonical_docs_dirty": False, "requires_replan": False}),
+]:
+    p = Path(f'docs/cccc/{idx_name}.json')
+    if not p.exists():
+        p.write_text(json.dumps(default, ensure_ascii=False, indent=2) + '\n')
+        print(f'Created {p}')
+
+for d in ['inbox/raw-notes','inbox/gpt-discussions','inbox/imported-docs','canonical','product','archive/irrelevant','archive/superseded','curation/reports','curation/conflicts','curation/extractions']:
+    Path(f'docs/cccc/{d}').mkdir(parents=True, exist_ok=True)
+CUR
+
 # ── Sync commands ──
 
 echo ""

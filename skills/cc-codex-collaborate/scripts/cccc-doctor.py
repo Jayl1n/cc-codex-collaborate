@@ -419,7 +419,73 @@ def check_review_policy():
                    "Run /cccc checkpoint after Codex review passes")
 
 
-def check_context():
+def check_curation():
+    """Check curation pipeline status."""
+    source_index_path = WORKSPACE / "source-index.json"
+    curation_state_path = WORKSPACE / "curation-state.json"
+    source_map_path = WORKSPACE / "source-map.json"
+
+    if not source_index_path.exists():
+        record(WARN, "source-index.json missing", "运行 /cccc sync-inbox 初始化索引")
+        return
+    record(PASS, "source-index.json exists")
+
+    idx = read_json(source_index_path)
+    if not idx:
+        record(FAIL, "source-index.json invalid JSON")
+        return
+
+    sources = idx.get("sources", {})
+    pending = sum(1 for s in sources.values() if s.get("requires_curation") and s.get("status") not in ("deleted", "archived", "ignored"))
+    record(PASS, f"  {len(sources)} inbox source(s) tracked")
+    if pending > 0:
+        record(WARN, f"  {pending} source(s) pending curation", "运行 /cccc curate-docs")
+
+    if not curation_state_path.exists():
+        record(WARN, "curation-state.json missing", "运行 /cccc force-update 补齐文件")
+        return
+    record(PASS, "curation-state.json exists")
+
+    cs = read_json(curation_state_path)
+    if not cs:
+        record(FAIL, "curation-state.json invalid JSON")
+        return
+
+    dirty = cs.get("canonical_docs_dirty", False)
+    requires_replan = cs.get("requires_replan", False)
+    conflicts = cs.get("pending_conflicts", [])
+    questions = cs.get("pending_questions", [])
+
+    if dirty:
+        record(WARN, "canonical_docs_dirty = true", "Canonical docs modified by curation, may need replan")
+    if requires_replan:
+        record(WARN, "curation requires_replan = true", "运行 /cccc replan")
+    if conflicts:
+        record(WARN, f"{len(conflicts)} pending conflict(s)", "运行 /cccc curate-docs 解决冲突")
+    if questions:
+        record(WARN, f"{len(questions)} pending question(s)", "运行 /cccc curate-docs 回答问题")
+
+    if not source_map_path.exists():
+        record(WARN, "source-map.json missing", "运行 /cccc curate-docs 生成映射")
+    else:
+        record(PASS, "source-map.json exists")
+
+    # Check inbox has unregistered files
+    inbox = WORKSPACE / "inbox"
+    if inbox.exists():
+        import hashlib
+        text_ext = {".md", ".txt", ".json", ".yaml", ".yml", ".csv", ".rst"}
+        unreg = 0
+        for p in inbox.rglob("*"):
+            if p.is_file() and p.suffix.lower() in text_ext:
+                rel = str(p.relative_to(ROOT))
+                if rel not in sources:
+                    unreg += 1
+        if unreg > 0:
+            record(WARN, f"{unreg} unregistered file(s) in inbox", "运行 /cccc sync-inbox 登记新文档")
+
+
+
     ctx_path = WORKSPACE / "context-bundle.md"
     if not ctx_path.exists():
         record(WARN, "context-bundle.md missing", "运行 /cc-codex-collaborate rebuild-context")
@@ -468,6 +534,7 @@ def main():
     check_docs_sync()
     check_codex_bypass()
     check_review_policy()
+    check_curation()
     check_context()
 
     # Output results

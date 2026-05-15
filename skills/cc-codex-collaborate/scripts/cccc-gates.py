@@ -235,6 +235,46 @@ def check_review_policy_gate(cfg: dict, st: dict):
     print()
 
 
+def check_curation_gate(st: dict):
+    """Check curation gate status."""
+    print("Curation gate:")
+    source_index_path = WORKSPACE / "source-index.json"
+    curation_state_path = WORKSPACE / "curation-state.json"
+
+    if not source_index_path.exists():
+        print("  source-index: not found (no inbox docs tracked)")
+        print("  implementation allowed: yes (no curation pipeline)")
+        print()
+        return
+
+    idx = read_json(source_index_path) or {}
+    pending = sum(1 for s in idx.get("sources", {}).values()
+                  if s.get("requires_curation") and s.get("status") not in ("deleted", "archived", "ignored"))
+
+    cs = read_json(curation_state_path) or {}
+    conflicts = len(cs.get("pending_conflicts", []))
+    dirty = cs.get("canonical_docs_dirty", False)
+    requires_replan = cs.get("requires_replan", False)
+    state_replan = st.get("curation_requires_replan", False)
+
+    print(f"  pending curation: {pending}")
+    print(f"  pending conflicts: {conflicts}")
+    print(f"  canonical docs dirty: {dirty}")
+    print(f"  requires replan: {requires_replan or state_replan}")
+
+    impl_allowed = not (conflicts > 0 or requires_replan or state_replan)
+    print(f"  implementation allowed: {'yes' if impl_allowed else 'no'}")
+
+    if not impl_allowed:
+        if conflicts > 0:
+            print(f"  修复: /cccc curate-docs (resolve conflicts)")
+        if requires_replan or state_replan:
+            print(f"  修复: /cccc replan")
+    elif pending > 0:
+        print(f"  建议: /cccc curate-docs ({pending} inbox source(s) pending)")
+    print()
+
+
 def main():
     cfg = read_json(WORKSPACE / "config.json")
     st = read_json(WORKSPACE / "state.json")
@@ -252,6 +292,7 @@ def main():
     check_final_gate(cfg, st)
     check_safety_gate(st)
     check_docs_sync_gate(st)
+    check_curation_gate(st)
     check_review_policy_gate(cfg, st)
     check_testing_gate(st)
 

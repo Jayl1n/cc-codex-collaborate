@@ -1,7 +1,7 @@
 # CCCC — Claude Code × Codex 协作引擎
 
 <p align="center">
-  <strong>版本</strong> 0.1.18 &nbsp;|&nbsp; <strong>代号</strong> CCCC &nbsp;|&nbsp; <strong>协议</strong> MIT
+  <strong>版本</strong> 0.1.19 &nbsp;|&nbsp; <strong>代号</strong> CCCC &nbsp;|&nbsp; <strong>协议</strong> MIT
 </p>
 
 <p align="center">
@@ -223,6 +223,10 @@ update 会在 `docs/cccc/backups/update-<timestamp>/` 下创建备份。
 /cccc codex-budget     查看 Codex 预算、策略、缓存、checkpoint
 /cccc review-now       强制立即 Codex review（当前/batch/full）
 /cccc checkpoint       管理 Codex-approved checkpoint
+/cccc ingest-docs      导入外部讨论文档到 inbox
+/cccc sync-inbox       增量发现 inbox 文档变化
+/cccc curate-docs      提炼 raw docs 中的工程内容到 canonical docs
+/cccc distill-project  从所有来源重建项目状态
 /cccc reset            重置状态机（从文档重新推断进度）
 /cccc doctor           诊断安装/配置/hooks/Codex/gates
 /cccc rebuild-context  重新生成 context-bundle
@@ -386,6 +390,27 @@ Codex 恢复后，运行：
 ```
 
 Codex pass 后建议 checkpoint（git commit），后续只 review 新 diff。Review cache 会避免相同 diff 重复消耗 Codex。
+
+## 混杂文档提炼
+
+如果你和 GPT / Claude 讨论过项目，生成了混杂文档，不要直接让 skill 根据这些 raw notes 实现代码。
+
+推荐流程：
+
+1. 把混杂文档放入：`docs/cccc/inbox/gpt-discussions/`
+2. 运行：`/cccc sync-inbox`
+3. 运行：`/cccc curate-docs`
+4. 根据选项确认哪些内容进入 canonical docs
+5. 如果架构或 roadmap 发生变化，运行：`/cccc replan`
+6. 之后再执行：`/cccc "你的任务"`
+
+核心原则：
+
+- **inbox = 原始证据**（不直接驱动代码）
+- **canonical = 工程事实来源**（经过提炼确认）
+- **product = 产品/商业化资料**（不直接生成 milestone）
+- **source-map = raw 到 canonical 的映射**
+- **curation-state = 当前提炼状态**
 
 ## 追问设计
 

@@ -1,5 +1,64 @@
 # Changelog
 
+## 0.1.19 - 2026-05-15
+
+### Added
+
+- Mixed-document curation pipeline: ingest, sync, classify, and extract engineering content from raw discussion notes.
+- `/cc-codex-collaborate ingest-docs` and `/cccc ingest-docs` — Import external discussion documents to inbox.
+- `/cc-codex-collaborate sync-inbox` and `/cccc sync-inbox` — Incremental discovery of inbox document changes with SHA256 hashing.
+- `/cc-codex-collaborate curate-docs` and `/cccc curate-docs` — Classify, deduplicate, conflict-identify, and extract engineering content from raw docs into canonical docs.
+- `/cc-codex-collaborate distill-project` and `/cccc distill-project` — Rebuild clean project state from raw docs + canonical docs + code + git history.
+- Inbox workspace directories: `docs/cccc/inbox/{raw-notes,gpt-discussions,imported-docs}`.
+- Canonical docs directory: `docs/cccc/canonical/`.
+- Product docs directory: `docs/cccc/product/` (product-notes, business-notes, monetization-notes, go-to-market-notes).
+- Archive directories: `docs/cccc/archive/{irrelevant,superseded}`.
+- Curation workspace: `docs/cccc/curation/{reports,conflicts,extractions}`.
+- `source-index.json` — Tracks raw doc hashes, status, and curation needs.
+- `source-map.json` — Maps raw source content to canonical doc targets with classification.
+- `curation-state.json` — Tracks curation state: pending sources, conflicts, questions, dirty flags.
+- Content classification system: engineering_required, engineering_optional, architecture_decision, implementation_task, test_requirement, risk_or_constraint, product_context, business_context, monetization_context, go_to_market_context, irrelevant, unclear, conflict.
+- Curation gate in loop-start: blocks workflow when pending conflicts or curation requires replan.
+- Curation checks in doctor: source-index, curation-state, pending curation, conflicts, unregistered inbox files.
+- Curation gate in gates: shows pending curation, conflicts, and implementation-allowed status.
+- Curation status in loop-status: inbox sources, pending curation, canonical docs dirty, requires replan.
+- Curation summary in context-bundle: source-index status, pending curation, conflicts, source-of-truth statement.
+- Curation rules in Codex plan review prompt: canonical docs are authority, raw notes are evidence only.
+- `cccc-ingest-docs.sh`, `cccc-sync-inbox.py`, `cccc-curate-docs.py`, `cccc-distill-project.sh` scripts.
+- `source-index.template.json`, `source-map.template.json`, `curation-state.template.json` templates.
+- `config.curation` section with curation pipeline settings.
+- State curation fields: `curation_status`, `last_curation_at`, `pending_inbox_sources`, `curation_requires_replan`.
+- `docs/docs-curation.md` documentation file.
+- `NEEDS_CURATION` resume status support.
+- `needs_curation` loop-start action.
+
+### Changed
+
+- SKILL.md core invariants updated: raw notes are evidence, canonical docs are authority.
+- SKILL.md documentation loading map includes docs-curation.md.
+- SKILL.md command routing includes ingest-docs, sync-inbox, curate-docs, distill-project.
+- Command templates updated with new command routing and version 0.1.19.
+- `cccc-common.sh` init dirs creates inbox, canonical, product, archive, curation directories.
+- `cccc-init.sh` creates curation index files and product docs from templates.
+- `cccc-setup.sh` shows curation tips in setup summary.
+- `cccc-update.sh` migrates curation config, state fields, index files, and directories.
+- `cccc-build-context.sh` includes Curation Summary section.
+- `cccc-loop-start.sh` checks curation gate before continuing workflow.
+- `cccc-loop-status.sh` shows curation status.
+- `cccc-doctor.py` runs curation checks.
+- `cccc-gates.py` shows curation gate.
+- `cccc-resume.sh` supports NEEDS_CURATION status.
+- Codex plan review prompt includes curation rules.
+- Config template includes `curation` section.
+- State template includes curation fields.
+
+### Notes
+
+- Raw inbox documents are evidence only — they cannot directly drive code implementation.
+- Canonical docs are the authoritative source for engineering decisions.
+- Product/business content is isolated in `docs/cccc/product/` and does not directly generate milestones.
+- `curate-docs` requires user confirmation before modifying canonical docs.
+
 ## 0.1.18 - 2026-05-15
 
 ### Changed

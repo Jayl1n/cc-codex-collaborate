@@ -38,6 +38,9 @@ cccc_require_cmd() {
 
 cccc_init_dirs() {
   mkdir -p docs/cccc/{reviews/plan,reviews/milestones,logs,runtime,templates,backups}
+  mkdir -p docs/cccc/{inbox/raw-notes,inbox/gpt-discussions,inbox/imported-docs}
+  mkdir -p docs/cccc/{canonical,product,archive/irrelevant,archive/superseded}
+  mkdir -p docs/cccc/curation/{reports,conflicts,extractions}
 }
 
 # Read a value from config.json. Usage: cccc_config_value '.mode' 'default'

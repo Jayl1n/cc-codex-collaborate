@@ -242,6 +242,44 @@ echo "  calls this run: $CODEX_CALLS / $MAX_CALLS"
 echo "  pending batch: $PENDING_BATCH milestone(s)"
 echo "  last approved commit: $LAST_COMMIT"
 
+# ── Curation status ──
+
+echo ""
+echo "Curation:"
+SOURCE_INDEX_FILE="docs/cccc/source-index.json"
+CURATION_STATE_FILE="docs/cccc/curation-state.json"
+if [[ -f "$SOURCE_INDEX_FILE" ]]; then
+  echo "  source-index: present"
+  INBOX_TOTAL="$(jq -r '.sources | length // 0' "$SOURCE_INDEX_FILE" 2>/dev/null || echo '0')"
+  INBOX_PENDING="$(python3 -c "
+import json
+idx = json.loads(open('$SOURCE_INDEX_FILE').read())
+print(sum(1 for s in idx.get('sources',{}).values() if s.get('requires_curation') and s.get('status') not in ('deleted','archived','ignored')))
+" 2>/dev/null || echo '0')"
+  echo "  total inbox sources: $INBOX_TOTAL"
+  echo "  pending curation: $INBOX_PENDING"
+else
+  echo "  source-index: MISSING"
+  echo "  recommended: /cccc sync-inbox"
+fi
+
+if [[ -f "$CURATION_STATE_FILE" ]]; then
+  echo "  curation-state: present"
+  CURATION_DIRTY="$(jq -r '.canonical_docs_dirty // false' "$CURATION_STATE_FILE" 2>/dev/null || echo 'false')"
+  CURATION_REPLAN="$(jq -r '.requires_replan // false' "$CURATION_STATE_FILE" 2>/dev/null || echo 'false')"
+  CURATION_CONFLICTS="$(jq -r '.pending_conflicts // [] | length' "$CURATION_STATE_FILE" 2>/dev/null || echo '0')"
+  echo "  canonical docs dirty: $CURATION_DIRTY"
+  echo "  requires replan: $CURATION_REPLAN"
+  echo "  pending conflicts: $CURATION_CONFLICTS"
+  if [[ "$CURATION_REPLAN" == "true" ]]; then
+    echo "  recommended: /cccc replan"
+  elif [[ "$CURATION_CONFLICTS" -gt 0 ]]; then
+    echo "  recommended: /cccc curate-docs"
+  fi
+else
+  echo "  curation-state: MISSING"
+fi
+
 # ── Resume guidance ──
 
 echo ""

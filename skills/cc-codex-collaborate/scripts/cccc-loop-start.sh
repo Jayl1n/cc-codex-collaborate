@@ -103,6 +103,34 @@ DOCS_INVALIDATED="$(jq -r '.planning_invalidated_by_doc_change // false' "$STATE
 DOCS_STATUS="$(jq -r '.docs_sync_status // "clean"' "$STATE" 2>/dev/null || echo 'clean')"
 LOOP_STATUS="$(jq -r '.status // "UNKNOWN"' "$STATE" 2>/dev/null || echo 'UNKNOWN')"
 
+# Check curation gate before continuing
+CURATION_REQUIRES_REPLAN="$(jq -r '.curation_requires_replan // false' "$STATE" 2>/dev/null || echo 'false')"
+if [[ -f docs/cccc/curation-state.json ]]; then
+  CURATION_STATE_REPLAN="$(jq -r '.requires_replan // false' docs/cccc/curation-state.json 2>/dev/null || echo 'false')"
+  CURATION_STATE_DIRTY="$(jq -r '.canonical_docs_dirty // false' docs/cccc/curation-state.json 2>/dev/null || echo 'false')"
+  CURATION_CONFLICTS="$(jq -r '.pending_conflicts // [] | length' docs/cccc/curation-state.json 2>/dev/null || echo '0')"
+else
+  CURATION_STATE_REPLAN="false"
+  CURATION_STATE_DIRTY="false"
+  CURATION_CONFLICTS="0"
+fi
+
+if [[ "$CURATION_REQUIRES_REPLAN" == "true" || "$CURATION_STATE_REPLAN" == "true" || "$CURATION_CONFLICTS" -gt 0 ]]; then
+  echo "CCCC_LOOP_START_RESULT=enabled"
+  echo "CCCC_WORKFLOW_ACTION=needs_curation"
+  echo "CCCC_WORKFLOW_REASON=\"Raw or curated docs changed and require curation/replan before implementation.\""
+  echo ""
+  echo "Curation gate is blocking workflow continuation."
+  if [[ "$CURATION_CONFLICTS" -gt 0 ]]; then
+    echo "There are $CURATION_CONFLICTS pending conflict(s) requiring user resolution."
+  fi
+  echo ""
+  echo "Run: /cccc curate-docs"
+  echo "Or: /cccc distill-project"
+  echo "Or: /cccc replan (after curation)"
+  exit 0
+fi
+
 if [[ "$DOCS_INVALIDATED" == "true" || "$LOOP_STATUS" == "NEEDS_REPLAN" ]]; then
   echo "CCCC_LOOP_START_RESULT=enabled"
   echo "CCCC_WORKFLOW_ACTION=needs_replan"

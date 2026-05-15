@@ -1,7 +1,7 @@
 # CCCC — Claude Code × Codex Collaboration Engine
 
 <p align="center">
-  <strong>Version</strong> 0.1.18 &nbsp;|&nbsp; <strong>Short name</strong> CCCC &nbsp;|&nbsp; <strong>License</strong> MIT
+  <strong>Version</strong> 0.1.19 &nbsp;|&nbsp; <strong>Short name</strong> CCCC &nbsp;|&nbsp; <strong>License</strong> MIT
 </p>
 
 <p align="center">
@@ -223,6 +223,10 @@ Short aliases call the same scripts and behave identically to full commands. The
 /cccc codex-budget      Show Codex review budget, policy, cache, checkpoint
 /cccc review-now        Force immediate Codex review (current/batch/full)
 /cccc checkpoint        Manage Codex-approved checkpoints
+/cccc ingest-docs       Import external discussion docs to inbox
+/cccc sync-inbox        Incremental discovery of inbox doc changes
+/cccc curate-docs       Extract engineering content from raw docs to canonical docs
+/cccc distill-project   Rebuild project state from all sources
 /cccc reset             Reset state machine and rehydrate from docs
 /cccc doctor            Diagnose installation, config, hooks, Codex, gates, context
 /cccc rebuild-context   Rebuild context-bundle.md
@@ -310,6 +314,27 @@ Management tools:
 ```
 
 After Codex passes, create a checkpoint (git commit). Future reviews only cover new diff. Review cache avoids redundant Codex calls on identical diffs.
+
+## Curating Mixed Project Notes
+
+If you discussed your project with GPT / Claude / other tools and generated mixed documents, do not let the skill implement code directly from those raw notes.
+
+Recommended flow:
+
+1. Place mixed documents in: `docs/cccc/inbox/gpt-discussions/`
+2. Run: `/cccc sync-inbox`
+3. Run: `/cccc curate-docs`
+4. Confirm which content enters canonical docs
+5. If architecture or roadmap changed, run: `/cccc replan`
+6. Then start: `/cccc "your task"`
+
+Core principle:
+
+- **inbox = raw evidence** (does not directly drive code)
+- **canonical = engineering authority** (curated and confirmed)
+- **product = product/business reference** (does not directly generate milestones)
+- **source-map = raw-to-canonical mapping**
+- **curation-state = current curation status**
 
 ## Hook behavior
 
