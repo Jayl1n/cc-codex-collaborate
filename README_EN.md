@@ -1,7 +1,7 @@
 # CCCC — Claude Code × Codex Collaboration Engine
 
 <p align="center">
-  <strong>Version</strong> 0.1.15 &nbsp;|&nbsp; <strong>Short name</strong> CCCC &nbsp;|&nbsp; <strong>License</strong> MIT
+  <strong>Version</strong> 0.1.16 &nbsp;|&nbsp; <strong>Short name</strong> CCCC &nbsp;|&nbsp; <strong>License</strong> MIT
 </p>
 
 <p align="center">
@@ -218,6 +218,8 @@ Short aliases call the same scripts and behave identically to full commands. The
 /cccc sync-docs         Detect and sync docs/cccc document changes
 /cccc diff-docs         Check for document changes (read-only)
 /cccc replan            Re-plan after documentation changes
+/cccc bypass-codex      Manage Codex bypass (alternative review when Codex unavailable)
+/cccc codex-recheck     Re-check bypassed gates when Codex becomes available
 /cccc reset             Reset state machine and rehydrate from docs
 /cccc doctor            Diagnose installation, config, hooks, Codex, gates, context
 /cccc rebuild-context   Rebuild context-bundle.md
@@ -254,6 +256,36 @@ Short aliases call the same scripts and behave identically to full commands. The
 | `/cccc trace` | Show recent state machine events |
 | `/cccc dev-smoke` | Developer self-test (JSON/shell/Python validation) |
 | `/cccc codex-check` | Check Codex CLI availability |
+
+## Codex Unavailable and Bypass Mode
+
+By default, cc-codex-collaborate requires Codex for independent review. If Codex quota is exhausted, CLI is unavailable, or auth fails, the workflow pauses.
+
+During setup, you choose a Codex unavailable policy:
+
+- **Strict pause** — Safest, wait for Codex
+- **Allow one-time bypass** — Claude Code performs adversarial review (Recommended)
+- **Auto bypass for low/medium risk** — High risk still pauses
+- **Always ask** — User decides each time
+- **Custom**
+
+Bypass is NOT the same as Codex pass. Bypass generates lower-assurance review artifacts. Gate status is `bypassed`, not `pass`.
+
+When Codex becomes available:
+
+```text
+/cccc codex-recheck
+```
+
+Manage bypass:
+
+```text
+/cccc bypass-codex status    # Show bypass status
+/cccc bypass-codex once      # Request one-time bypass
+/cccc bypass-codex off       # Disable bypass
+```
+
+High-risk, critical-risk, wallet, production, and real-money scenarios cannot be bypassed by default.
 
 ## Hook behavior
 

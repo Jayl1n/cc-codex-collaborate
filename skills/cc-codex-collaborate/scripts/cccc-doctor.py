@@ -320,6 +320,54 @@ def check_docs_sync():
         record(PASS, "All tracked documents up-to-date")
 
 
+def check_codex_bypass():
+    cfg = read_json(WORKSPACE / "config.json")
+    st = read_json(WORKSPACE / "state.json")
+    if not cfg or not st:
+        return
+
+    codex_cfg = cfg.get("codex", {})
+    bypass_cfg = codex_cfg.get("bypass", {})
+    policy = codex_cfg.get("unavailable_policy", "strict_pause")
+
+    record(PASS, f"codex.unavailable_policy = {policy}")
+
+    if not bypass_cfg.get("enabled", False):
+        record(PASS, "codex.bypass.enabled = false")
+        return
+
+    record(PASS, f"codex.bypass.enabled = true")
+    max_consec = bypass_cfg.get("max_consecutive_bypassed_gates", 1)
+    if max_consec > 3:
+        record(WARN, f"max_consecutive_bypassed_gates = {max_consec} (>3)", "Consider lowering to 1 or 2")
+
+    lower = st.get("lower_assurance_mode", False)
+    if lower:
+        record(WARN, "lower_assurance_mode = true", "运行 /cccc codex-recheck when Codex available")
+
+    pending = st.get("pending_codex_recheck", [])
+    if pending:
+        record(WARN, f"pending_codex_recheck has {len(pending)} item(s)", "运行 /cccc codex-recheck when Codex available")
+
+    consec = st.get("consecutive_bypassed_gates", 0)
+    if consec > 0:
+        record(WARN, f"consecutive_bypassed_gates = {consec}", "Multiple consecutive bypasses — consider running Codex reviews")
+
+    bypass_dir = WORKSPACE / "reviews" / "bypass"
+    if bypass_dir.exists():
+        bypass_files = list(bypass_dir.glob("*.json"))
+        if bypass_files:
+            record(PASS, f"  {len(bypass_files)} bypass review artifact(s) in reviews/bypass/")
+            # Check for high-risk bypass artifacts
+            for bf in bypass_files:
+                data = read_json(bf)
+                if data and data.get("risk_level") in ("high", "critical"):
+                    record(WARN, f"  High/critical risk bypass: {bf.name}",
+                           "Verify this bypass was appropriate. Run /cccc codex-recheck.")
+    else:
+        record(WARN, "reviews/bypass/ directory missing")
+
+
 def check_context():
     ctx_path = WORKSPACE / "context-bundle.md"
     if not ctx_path.exists():
@@ -367,6 +415,7 @@ def main():
     check_commands()
     check_codex()
     check_docs_sync()
+    check_codex_bypass()
     check_context()
 
     # Output results

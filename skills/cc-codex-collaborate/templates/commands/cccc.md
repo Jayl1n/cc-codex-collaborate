@@ -1,11 +1,11 @@
 <!-- generated-by: cc-codex-collaborate -->
 <!-- generated-file: true -->
-<!-- template-version: 0.1.15 -->
+<!-- template-version: 0.1.16 -->
 <!-- alias-for: cc-codex-collaborate -->
 
 ---
 description: "Alias for /cc-codex-collaborate. Coordinate Claude Code and Codex in a milestone-based collaboration loop."
-argument-hint: "[task description | setup | update | force-update | resume | reset | doctor | rebuild-context | gates | repair | trace | dev-smoke | codex-check | sync-docs | diff-docs | replan | status | loop-status | loop-start | loop-stop]"
+argument-hint: "[task description | setup | update | force-update | resume | reset | doctor | rebuild-context | gates | repair | trace | dev-smoke | codex-check | sync-docs | diff-docs | replan | bypass-codex | codex-recheck | status | loop-status | loop-start | loop-stop]"
 ---
 
 This is a short alias for `/cc-codex-collaborate`. Follow the instructions in `.claude/skills/cc-codex-collaborate/SKILL.md` exactly.
@@ -29,6 +29,8 @@ Parse the first argument:
 - **`sync-docs`** — Detect and sync manual docs/cccc document changes. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-sync-docs.py` and present changes. If `SYNC_AWAITING_DECISION=true`, ask the user with brainstorm-style options (A-F). Does NOT silently overwrite user documents or skip Codex gates.
 - **`diff-docs`** — Check for document changes without modifying state. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-diff-docs.py` and present results. Read-only.
 - **`replan`** — Re-read project and docs, update planning, run Codex adversarial plan review. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-replan.sh` then follow the `===REPLAN_REQUIRED===` instructions. Does NOT start implementation until Codex plan review passes.
+- **`bypass-codex`** — Manage Codex bypass. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-bypass-codex.py [status|once|apply|off]`. Lower-assurance Claude adversarial review when Codex unavailable.
+- **`codex-recheck`** — Re-check bypassed gates when Codex available. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-codex-recheck.sh` then follow `===CODEX_RECHECK_REQUIRED===` instructions.
 - **`status`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-status.sh` and summarize.
 - **`loop-status`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-loop-status.sh` and summarize.
 - **`loop-start`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-loop-start.sh`. **You MUST act on the CCCC_WORKFLOW_ACTION marker immediately. See below.**

@@ -29,20 +29,29 @@ def check_plan_gate(cfg: dict, st: dict):
     plan_status = st.get("codex_plan_review_status", "not_run")
     plan_file = st.get("last_codex_plan_review_file")
     roadmap_status = st.get("roadmap_status", "not_reviewed")
-    impl_allowed = plan_status == "pass"
+    impl_allowed = plan_status == "pass" or plan_status == "bypassed"
 
     print(f"  Codex plan review: {plan_status}")
-    if plan_file:
+    if plan_status == "bypassed":
+        print(f"  Assurance: lower_than_codex_review (Claude bypass)")
+        bypass_file = st.get("last_codex_bypass_review_file")
+        if bypass_file:
+            print(f"  Bypass review file: {bypass_file}")
+    if plan_file and plan_status != "bypassed":
         exists = Path(plan_file).exists() if not plan_file.startswith("/tmp") else True
         print(f"  Review file: {plan_file} ({'exists' if exists else 'missing'})")
-    else:
+    elif not plan_file and plan_status != "bypassed":
         print(f"  Review file: (none)")
 
     print(f"  Roadmap status: {roadmap_status}")
-    print(f"  Implementation allowed: {'yes' if impl_allowed else 'no'}")
-    if not impl_allowed:
+    if plan_status == "bypassed":
+        print(f"  Implementation allowed: yes, but lower assurance")
+        print(f"  Required follow-up: Run /cccc codex-recheck when Codex is available.")
+    else:
+        print(f"  Implementation allowed: {'yes' if impl_allowed else 'no'}")
+    if not impl_allowed and plan_status != "bypassed":
         if plan_status == "not_run":
-            print(f"  原因: Codex plan review 尚未执行。运行 /cc-codex-collaborate plan-review")
+            print(f"  原因: Codex plan review 尚未执行。运行 /cccc plan-review")
         elif plan_status == "fail":
             print(f"  原因: Codex plan review 未通过。修复后重新提交。")
         elif plan_status == "needs_human":
@@ -57,7 +66,7 @@ def check_milestone_gate(cfg: dict, st: dict):
     mid = st.get("current_milestone_id")
     review_status = st.get("current_milestone_codex_review_status", "not_run")
     review_file = st.get("current_milestone_codex_review_file")
-    pass_allowed = review_status == "pass"
+    pass_allowed = review_status == "pass" or review_status == "bypassed"
 
     print(f"  Current milestone: {mid or '(none)'}")
     if not mid:
@@ -67,14 +76,23 @@ def check_milestone_gate(cfg: dict, st: dict):
         return
 
     print(f"  Codex review: {review_status}")
-    if review_file:
+    if review_status == "bypassed":
+        print(f"  Assurance: lower_than_codex_review (Claude bypass)")
+        bypass_file = st.get("last_codex_bypass_review_file")
+        if bypass_file:
+            print(f"  Bypass review file: {bypass_file}")
+    if review_file and review_status != "bypassed":
         exists = Path(review_file).exists() if not review_file.startswith("/tmp") else True
         print(f"  Review file: {review_file} ({'exists' if exists else 'missing'})")
-    else:
+    elif not review_file and review_status != "bypassed":
         print(f"  Review file: (none)")
 
-    print(f"  Milestone pass allowed: {'yes' if pass_allowed else 'no'}")
-    if not pass_allowed:
+    if review_status == "bypassed":
+        print(f"  Milestone pass allowed: yes, but lower assurance")
+        print(f"  Required follow-up: Run /cccc codex-recheck when Codex is available.")
+    else:
+        print(f"  Milestone pass allowed: {'yes' if pass_allowed else 'no'}")
+    if not pass_allowed and review_status != "bypassed":
         if review_status == "not_run":
             print(f"  原因: Codex milestone review 尚未执行。不允许直接标记 milestone passed。")
         elif review_status == "fail":
@@ -90,17 +108,26 @@ def check_final_gate(cfg: dict, st: dict):
     print("Final review gate:")
     final_status = st.get("codex_final_review_status", "not_run")
     final_file = st.get("last_codex_final_review_file")
-    completion_allowed = final_status == "pass"
+    completion_allowed = final_status == "pass" or final_status == "bypassed"
 
     print(f"  Codex final review: {final_status}")
-    if final_file:
+    if final_status == "bypassed":
+        print(f"  Assurance: lower_than_codex_review (Claude bypass)")
+        bypass_file = st.get("last_codex_bypass_review_file")
+        if bypass_file:
+            print(f"  Bypass review file: {bypass_file}")
+    if final_file and final_status != "bypassed":
         exists = Path(final_file).exists() if not final_file.startswith("/tmp") else True
         print(f"  Review file: {final_file} ({'exists' if exists else 'missing'})")
-    else:
+    elif not final_file and final_status != "bypassed":
         print(f"  Review file: (none)")
 
-    print(f"  Task completion allowed: {'yes' if completion_allowed else 'no'}")
-    if not completion_allowed:
+    if final_status == "bypassed":
+        print(f"  Task completion allowed: yes, but lower assurance")
+        print(f"  Required follow-up: Run /cccc codex-recheck when Codex is available.")
+    else:
+        print(f"  Task completion allowed: {'yes' if completion_allowed else 'no'}")
+    if not completion_allowed and final_status != "bypassed":
         if final_status == "not_run":
             print(f"  原因: Codex final review 尚未执行。")
         elif final_status == "fail":

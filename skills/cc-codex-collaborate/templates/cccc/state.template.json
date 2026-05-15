@@ -1,6 +1,6 @@
 {
   "skill_name": "cc-codex-collaborate",
-  "skill_version": "0.1.15",
+  "skill_version": "0.1.16",
   "workspace": "docs/cccc",
   "workspace_schema_version": 1,
   "last_migration_at": null,
@@ -42,6 +42,14 @@
   "last_doc_change_summary": null,
   "last_doc_change_impact": null,
   "last_doc_sync_decision": null,
+  "codex_bypass_enabled_for_current_gate": false,
+  "last_codex_bypass_at": null,
+  "last_codex_bypass_reason": null,
+  "last_codex_bypass_scope": null,
+  "last_codex_bypass_review_file": null,
+  "consecutive_bypassed_gates": 0,
+  "pending_codex_recheck": [],
+  "lower_assurance_mode": false,
   "created_at": "",
   "updated_at": ""
 }

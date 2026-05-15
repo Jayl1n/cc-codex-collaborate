@@ -147,6 +147,70 @@ else
   echo "doc-index.json already exists. Preserving."
 fi
 
+# ── Migrate bypass fields ──
+
+echo ""
+echo "Checking bypass fields..."
+
+mkdir -p docs/cccc/reviews/bypass
+
+python3 - <<'PYB'
+import json
+from pathlib import Path
+
+# Ensure config has bypass fields
+cfg_path = Path('docs/cccc/config.json')
+cfg = json.loads(cfg_path.read_text())
+codex = cfg.setdefault('codex', {})
+
+if 'unavailable_policy' not in codex:
+    codex['unavailable_policy'] = 'ask_or_bypass_once'
+    print('Added codex.unavailable_policy')
+
+if 'bypass' not in codex:
+    codex['bypass'] = {
+        "enabled": True, "mode": "once_per_gate", "require_human_confirmation": True,
+        "allowed_reasons": ["quota_exhausted","codex_cli_unavailable","codex_auth_unavailable",
+                            "codex_api_error","user_explicit_override"],
+        "default_scope": "current_gate_only", "max_consecutive_bypassed_gates": 1,
+        "record_in_decision_log": True, "mark_outputs_as_lower_assurance": True,
+        "block_bypass_for_critical_risk": True, "block_bypass_for_high_risk_by_default": True,
+        "allow_for_low_risk": True, "allow_for_medium_risk": True,
+        "allow_for_high_risk": False, "allow_for_critical_risk": False,
+        "require_later_codex_recheck": True
+    }
+    print('Added codex.bypass config')
+
+cfg_path.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + '\n')
+
+# Ensure state has bypass fields
+st_path = Path('docs/cccc/state.json')
+if st_path.exists():
+    st = json.loads(st_path.read_text())
+    bypass_fields = {
+        'codex_bypass_enabled_for_current_gate': False,
+        'last_codex_bypass_at': None,
+        'last_codex_bypass_reason': None,
+        'last_codex_bypass_scope': None,
+        'last_codex_bypass_review_file': None,
+        'consecutive_bypassed_gates': 0,
+        'pending_codex_recheck': [],
+        'lower_assurance_mode': False,
+    }
+    added = []
+    for k, v in bypass_fields.items():
+        if k not in st:
+            st[k] = v
+            added.append(k)
+    if added:
+        st_path.write_text(json.dumps(st, ensure_ascii=False, indent=2) + '\n')
+        print(f'Added state fields: {", ".join(added)}')
+    else:
+        print('State bypass fields already present.')
+else:
+    print('state.json not found, skipping state migration.')
+PYB
+
 # ── Sync commands ──
 
 echo ""

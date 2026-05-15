@@ -1,10 +1,10 @@
 <!-- generated-by: cc-codex-collaborate -->
 <!-- generated-file: true -->
-<!-- template-version: 0.1.15 -->
+<!-- template-version: 0.1.16 -->
 
 ---
 description: Coordinate Claude Code and Codex in a milestone-based collaboration loop. Use "setup" for first-time configuration, "update" for safe migration, "resume" to continue a paused workflow.
-argument-hint: "[task description | setup | update | force-update | resume | reset | doctor | rebuild-context | gates | repair | trace | dev-smoke | codex-check | sync-docs | diff-docs | replan | status | loop-status | loop-start | loop-stop]"
+argument-hint: "[task description | setup | update | force-update | resume | reset | doctor | rebuild-context | gates | repair | trace | dev-smoke | codex-check | sync-docs | diff-docs | replan | bypass-codex | codex-recheck | status | loop-status | loop-start | loop-stop]"
 ---
 
 You are activating the cc-codex-collaborate skill. Follow the instructions in `.claude/skills/cc-codex-collaborate/SKILL.md` exactly.
@@ -28,6 +28,12 @@ Parse the first argument:
 - **`sync-docs`** — Detect and sync manual docs/cccc document changes. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-sync-docs.py` and present changes. If `SYNC_AWAITING_DECISION=true`, ask the user with brainstorm-style options (A-F). Does NOT silently overwrite user documents or skip Codex gates.
 - **`diff-docs`** — Check for document changes without modifying state. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-diff-docs.py` and present results. Read-only.
 - **`replan`** — Re-read project and docs, update planning, run Codex adversarial plan review. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-replan.sh` then follow the `===REPLAN_REQUIRED===` instructions. Does NOT start implementation until Codex plan review passes.
+- **`bypass-codex`** — Manage Codex bypass when Codex is unavailable. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-bypass-codex.py [status|once|apply|off]`. Subcommands:
+  - `status`: Show bypass config and state. Does NOT modify files.
+  - `once`: Request one-time Claude adversarial bypass for current gate. May require user confirmation. Does NOT skip Codex permanently.
+  - `apply --gate=<gate> --reason=<reason>`: Apply bypass after Claude adversarial review. Creates lower-assurance artifact in docs/cccc/reviews/bypass/. Updates state to `bypassed` (NOT `pass`).
+  - `off`: Disable bypass, set `strict_pause`.
+- **`codex-recheck`** — Re-check bypassed gates when Codex becomes available. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-codex-recheck.sh` then follow `===CODEX_RECHECK_REQUIRED===` instructions. Resolves pending Codex rechecks.
 - **`status`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-status.sh` and summarize.
 - **`loop-status`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-loop-status.sh` and summarize.
 - **`loop-start`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-loop-start.sh`. **You MUST act on the CCCC_WORKFLOW_ACTION marker immediately. See below.**

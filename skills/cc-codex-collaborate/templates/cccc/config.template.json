@@ -1,11 +1,11 @@
 {
   "skill": {
     "name": "cc-codex-collaborate",
-    "installed_version": "0.1.15",
+    "installed_version": "0.1.16",
     "workspace_schema_version": 1,
     "last_updated_at": null
   },
-  "version": "0.1.15",
+  "version": "0.1.16",
   "language": {
     "user_language": "auto",
     "auto_detect": true
@@ -57,7 +57,31 @@
     "allow_direct_repo_inspection": true,
     "require_plan_review_before_implementation": true,
     "require_milestone_review_before_pass": true,
-    "require_final_review_before_done": true
+    "require_final_review_before_done": true,
+    "unavailable_policy": "ask_or_bypass_once",
+    "bypass": {
+      "enabled": true,
+      "mode": "once_per_gate",
+      "require_human_confirmation": true,
+      "allowed_reasons": [
+        "quota_exhausted",
+        "codex_cli_unavailable",
+        "codex_auth_unavailable",
+        "codex_api_error",
+        "user_explicit_override"
+      ],
+      "default_scope": "current_gate_only",
+      "max_consecutive_bypassed_gates": 1,
+      "record_in_decision_log": true,
+      "mark_outputs_as_lower_assurance": true,
+      "block_bypass_for_critical_risk": true,
+      "block_bypass_for_high_risk_by_default": true,
+      "allow_for_low_risk": true,
+      "allow_for_medium_risk": true,
+      "allow_for_high_risk": false,
+      "allow_for_critical_risk": false,
+      "require_later_codex_recheck": true
+    }
   },
   "docs_sync": {
     "enabled": true,

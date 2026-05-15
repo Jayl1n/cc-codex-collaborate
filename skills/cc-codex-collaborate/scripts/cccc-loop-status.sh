@@ -206,6 +206,28 @@ else
   echo "  recommended: /cccc sync-docs (initialize index)"
 fi
 
+# ── Codex bypass status ──
+
+echo ""
+echo "Codex bypass:"
+CODEX_POLICY="$(json_value "$CONFIG" '.codex.unavailable_policy' 'strict_pause')"
+BYPASS_ENABLED="$(json_value "$CONFIG" '.codex.bypass.enabled' 'false')"
+echo "  unavailable_policy: $CODEX_POLICY"
+echo "  bypass enabled: $BYPASS_ENABLED"
+LOWER_ASSURANCE="$(json_value "$STATE" '.lower_assurance_mode' 'false')"
+CONSECUTIVE_BYPASS="$(json_value "$STATE" '.consecutive_bypassed_gates' '0')"
+PENDING_RECHECK="$(jq -r '.pending_codex_recheck | length // 0' "$STATE" 2>/dev/null || echo '0')"
+echo "  lower_assurance_mode: $LOWER_ASSURANCE"
+echo "  consecutive_bypassed_gates: $CONSECUTIVE_BYPASS"
+echo "  pending_codex_recheck: $PENDING_RECHECK"
+LAST_BYPASS_FILE="$(json_value "$STATE" '.last_codex_bypass_review_file' '')"
+if [[ -n "$LAST_BYPASS_FILE" && "$LAST_BYPASS_FILE" != "null" ]]; then
+  echo "  last_bypass_review: $LAST_BYPASS_FILE"
+fi
+if [[ "$LOWER_ASSURANCE" == "True" ]]; then
+  echo "  recommended: /cccc codex-recheck (when Codex available)"
+fi
+
 # ── Resume guidance ──
 
 echo ""

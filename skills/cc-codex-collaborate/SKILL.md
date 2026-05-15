@@ -1,6 +1,6 @@
 ---
 name: cc-codex-collaborate
-version: 0.1.15
+version: 0.1.16
 description: Coordinate Claude Code and Codex in a milestone-based collaboration loop. Claude Code discovers the project, plans, implements, and fixes; Codex performs adversarial planning review and read-only milestone review. Working documents are stored under docs/cccc.
 argument-hint: "[task description]"
 ---
@@ -215,6 +215,8 @@ Interpret the first argument after `/cc-codex-collaborate` as a subcommand when 
 - `sync-docs`: run `python3 scripts/cccc-sync-docs.py` to detect and sync docs/cccc document changes. Interactive.
 - `diff-docs`: run `python3 scripts/cccc-diff-docs.py` to check for document changes without modifying state.
 - `replan`: run `scripts/cccc-replan.sh` to re-read project and docs, update planning, and run Codex adversarial plan review.
+- `bypass-codex`: run `python3 scripts/cccc-bypass-codex.py` to manage Codex bypass. Subcommands: `status`, `once`, `apply`, `off`.
+- `codex-recheck`: run `scripts/cccc-codex-recheck.sh` to re-check bypassed gates when Codex becomes available.
 - `status`: run `scripts/cccc-status.sh` and summarize.
 - `loop-status`: run `scripts/cccc-loop-status.sh` and summarize.
 - `loop-start`: run `scripts/cccc-loop-start.sh` and summarize.
@@ -238,7 +240,9 @@ Short aliases: `/cccc` = `/cc-codex-collaborate`, `/cccc-loop-status` = `/cc-cod
 | `/cc-codex-collaborate sync-docs` | Detect and sync manual docs/cccc document changes. Interactive. May invalidate planning. |
 | `/cc-codex-collaborate diff-docs` | Check for document changes without modifying state. Read-only. |
 | `/cc-codex-collaborate replan` | Re-read project, update planning, run Codex adversarial plan review. |
-| `/cc-codex-collaborate gates` | Show plan/milestone/final/safety/docs-sync gate status. Does NOT modify files. |
+| `/cc-codex-collaborate bypass-codex` | Manage Codex bypass. Subcommands: status, once, apply, off. Generates lower-assurance Claude adversarial review. |
+| `/cc-codex-collaborate codex-recheck` | Re-check bypassed gates when Codex becomes available. Resolves pending rechecks. |
+| `/cc-codex-collaborate gates` | Show plan/milestone/final/safety/docs-sync gate status. Shows bypass status. Does NOT modify files. |
 | `/cc-codex-collaborate repair` | Auto-fix safe inconsistencies. Backs up before modifying. Does NOT bypass Codex gates or safety pauses. |
 | `/cc-codex-collaborate trace` | Show recent state machine events. Does NOT modify files. |
 | `/cc-codex-collaborate dev-smoke` | Developer self-test for skill installation. Does NOT modify user files. |
@@ -396,16 +400,18 @@ Codex must not directly modify files. Codex reviews using context and returns st
 
 Rules:
 
-1. Claude Code MUST NOT begin implementation until Codex adversarial plan review has passed.
-2. Claude Code MUST NOT mark a milestone as passed until Codex milestone review has passed.
-3. Claude Code MUST NOT mark the whole task as completed until Codex final review has passed.
-4. If Codex is unavailable, misconfigured, fails to run, or returns invalid JSON, Claude Code MUST pause with status `PAUSED_FOR_CODEX`.
+1. Claude Code MUST NOT begin implementation until Codex adversarial plan review has passed (or been bypassed with Claude adversarial review).
+2. Claude Code MUST NOT mark a milestone as passed until Codex milestone review has passed (or been bypassed with Claude adversarial review).
+3. Claude Code MUST NOT mark the whole task as completed until Codex final review has passed (or been bypassed with Claude adversarial review).
+4. If Codex is unavailable, misconfigured, fails to run, or returns invalid JSON, Claude Code MUST check `config.codex.unavailable_policy` and follow the configured strategy.
 5. Claude Code MUST NOT silently skip Codex review, even for trivial tasks.
 6. For trivial tasks, Claude may use a lightweight plan and milestone, but Codex review is still required.
 7. Self-checks such as cat, tests, lint, or build are NOT a substitute for Codex review.
-8. A milestone can only be marked passed if there is a valid Codex review artifact with `status = pass` for that milestone and review round.
-9. If no Codex review artifact exists, the only valid next action is to run Codex review or pause if Codex is unavailable.
-10. Any final summary must mention the Codex review file used to approve the milestone.
+8. A milestone can only be marked passed if there is a valid Codex review artifact with `status = pass` or a Claude adversarial bypass review artifact with `status = pass` for that milestone and review round.
+9. If no Codex review artifact or approved bypass review exists, the only valid next action is to run Codex review, run bypass review, or pause.
+10. Any final summary must mention the Codex review file or bypass review file used to approve the milestone.
+11. Bypass review results are marked as `lower_assurance`. They do NOT count as Codex pass.
+12. Critical-risk scenarios MUST NOT be bypassed.
 
 **Invariants (memorize these):**
 
@@ -851,3 +857,76 @@ Replan must:
 6. If Codex rejects or needs_human: set appropriate pause status. No implementation.
 
 Replan should NOT auto-implement code unless: mode = full-auto-safe, loop enabled, Codex plan review pass, no pause_reason, and user explicitly allows.
+
+## Codex Bypass Mode
+
+When Codex is unavailable (quota exhausted, CLI not installed, auth failure, API error), the skill can bypass Codex review with Claude Code acting as an adversarial reviewer.
+
+### Config
+
+`config.codex.unavailable_policy` controls behavior:
+- `strict_pause`: Always pause, never bypass. Safest.
+- `ask_or_bypass_once`: Ask user, allow one-time bypass per gate. Recommended.
+- `auto_bypass_low_medium`: Automatically bypass for low/medium risk. High/critical still pause.
+- `always_ask`: Always ask user when Codex unavailable.
+- `custom`: User-defined policy.
+
+`config.codex.bypass` controls bypass details:
+- `enabled`: Whether bypass is allowed.
+- `mode`: `once_per_gate` or `auto_low_medium`.
+- `require_human_confirmation`: Whether user must confirm bypass.
+- `max_consecutive_bypassed_gates`: Max bypasses before forcing Codex.
+- `allow_for_high_risk` / `allow_for_critical_risk`: Risk level gating.
+- `require_later_codex_recheck`: Whether Codex must recheck later.
+
+### bypass-codex command
+
+Run:
+```bash
+python3 .claude/skills/cc-codex-collaborate/scripts/cccc-bypass-codex.py [status|once|apply|off]
+```
+
+- `status`: Show bypass config and state.
+- `once`: Request one-time bypass for current gate. May require user confirmation.
+- `apply --gate=<gate> --reason=<reason>`: Apply bypass after Claude adversarial review. Creates artifact in `docs/cccc/reviews/bypass/`.
+- `off`: Disable bypass, set `strict_pause`.
+
+### Claude adversarial bypass review
+
+When bypass is used, Claude Code must act as an adversarial reviewer following `prompts/claude-adversarial-bypass-review.md`:
+1. Assume the implementation is wrong until proven otherwise.
+2. Check acceptance criteria, tests, architecture consistency.
+3. Check security, secrets, production, wallet risks.
+4. For high/critical risk, prefer `needs_human` or `unsafe`.
+5. Mark output as `lower_assurance`.
+6. Require later Codex recheck.
+
+### Bypass review artifacts
+
+Stored in `docs/cccc/reviews/bypass/<gate>-claude-bypass-review-<timestamp>.json`.
+
+Gate status values:
+- `pass`: Codex reviewed and approved.
+- `bypassed`: Claude adversarial bypass review approved (lower assurance).
+- `not_run`, `fail`, `needs_human`: No valid review.
+
+`bypassed` is NOT the same as `pass`. It indicates lower assurance.
+
+### codex-recheck command
+
+When Codex becomes available, re-check all bypassed gates:
+```bash
+.claude/skills/cc-codex-collaborate/scripts/cccc-codex-recheck.sh
+```
+
+If Codex passes: remove from `pending_codex_recheck`, update gate status to `pass`.
+If Codex fails: pause with `PAUSED_FOR_CODEX_RECHECK_FAILURE`.
+
+### Prohibited bypass scenarios
+
+Bypass is NEVER allowed for:
+- Real wallet private keys, seed phrases, keystores
+- Real money / mainnet transactions
+- Production deployments
+- Destructive operations
+- Critical risk scenarios

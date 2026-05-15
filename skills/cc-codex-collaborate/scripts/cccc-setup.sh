@@ -149,7 +149,25 @@ preset_strict() {
     "allow_direct_repo_inspection": true,
     "require_plan_review_before_implementation": true,
     "require_milestone_review_before_pass": true,
-    "require_final_review_before_done": true
+    "require_final_review_before_done": true,
+    "unavailable_policy": "ask_or_bypass_once",
+    "bypass": {
+      "enabled": true,
+      "mode": "once_per_gate",
+      "require_human_confirmation": true,
+      "allowed_reasons": ["quota_exhausted","codex_cli_unavailable","codex_auth_unavailable","codex_api_error","user_explicit_override"],
+      "default_scope": "current_gate_only",
+      "max_consecutive_bypassed_gates": 1,
+      "record_in_decision_log": true,
+      "mark_outputs_as_lower_assurance": true,
+      "block_bypass_for_critical_risk": true,
+      "block_bypass_for_high_risk_by_default": true,
+      "allow_for_low_risk": true,
+      "allow_for_medium_risk": true,
+      "allow_for_high_risk": false,
+      "allow_for_critical_risk": false,
+      "require_later_codex_recheck": true
+    }
   }
 }
 JSON
@@ -323,6 +341,30 @@ echo "language=$CONFIG_LANG"
 echo "max_review_rounds=$CONFIG_REVIEW"
 echo "max_diff_lines=$CONFIG_DIFF"
 echo "max_changed_files=$CONFIG_FILES"
+
+CODEX_POLICY="$(python3 -c "import json; print(json.loads(open('docs/cccc/config.json').read()).get('codex',{}).get('unavailable_policy','strict_pause'))")"
+echo "codex_unavailable_policy=$CODEX_POLICY"
+BYPASS_ENABLED="$(python3 -c "import json; print(json.loads(open('docs/cccc/config.json').read()).get('codex',{}).get('bypass',{}).get('enabled',False))")"
+echo "codex_bypass_enabled=$BYPASS_ENABLED"
+
+echo ""
+echo "CODEX_POLICY_SUMMARY:"
+echo "  Codex required: true"
+if [[ "$CODEX_POLICY" == "strict_pause" ]]; then
+  echo "  Unavailable policy: strict pause (bypass disabled)"
+elif [[ "$CODEX_POLICY" == "ask_or_bypass_once" ]]; then
+  echo "  Unavailable policy: ask or bypass once (Claude adversarial review)"
+  echo "  Bypass scope: current gate only"
+  echo "  High/critical risk: bypass prohibited"
+  echo "  Lower assurance: yes"
+elif [[ "$CODEX_POLICY" == "auto_bypass_low_medium" ]]; then
+  echo "  Unavailable policy: auto bypass for low/medium risk"
+  echo "  High/critical risk: bypass prohibited"
+elif [[ "$CODEX_POLICY" == "always_ask" ]]; then
+  echo "  Unavailable policy: always ask user"
+else
+  echo "  Unavailable policy: $CODEX_POLICY"
+fi
 
 echo ""
 echo "===END_SETUP_RESULT==="

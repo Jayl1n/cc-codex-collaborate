@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.1.16 - 2026-05-15
+
+### Added
+
+- Codex unavailable policy during setup: strict pause, one-time bypass, auto bypass low/medium, always ask, custom.
+- `/cc-codex-collaborate bypass-codex` and `/cccc bypass-codex` — Manage Codex bypass with status, once, apply, off subcommands.
+- `/cc-codex-collaborate codex-recheck` and `/cccc codex-recheck` — Re-check bypassed gates when Codex becomes available.
+- Claude adversarial bypass review mode — lower-assurance review when Codex is unavailable.
+- `claude-adversarial-bypass-review.md` prompt for Claude bypass review.
+- `cccc-bypass-codex.py` — Bypass command script with risk-level gating, confirmation, and artifact generation.
+- `cccc-codex-recheck.sh` — Codex recheck command wrapper.
+- Bypass review artifacts stored in `docs/cccc/reviews/bypass/`.
+- `config.codex.bypass` section with full bypass configuration (mode, allowed reasons, risk levels, recheck requirements).
+- `config.codex.unavailable_policy` — Controls Codex unavailable behavior.
+- State bypass fields: `codex_bypass_enabled_for_current_gate`, `last_codex_bypass_at`, `consecutive_bypassed_gates`, `pending_codex_recheck`, `lower_assurance_mode`.
+- Gate status `bypassed` — distinct from `pass`, indicates lower assurance.
+- Setup creates `docs/cccc/reviews/bypass/` directory.
+- Setup summary shows Codex unavailable policy and bypass configuration.
+- Doctor checks bypass state: max consecutive gates, lower assurance mode, pending rechecks, high-risk bypass artifacts.
+- Loop-status shows Codex bypass info: policy, bypass enabled, lower assurance, pending rechecks.
+- Gates display bypass status with assurance level and recheck follow-up.
+- Update migrates config bypass fields and state bypass fields.
+
+### Changed
+
+- SKILL.md updated with Codex Bypass Mode section, updated Mandatory Codex Gates rules, new commands.
+- README.md and README_EN.md updated with Codex Unavailable and Bypass Mode sections.
+- Command templates updated with bypass-codex and codex-recheck routing.
+- Setup preset functions include full bypass configuration.
+
+### Notes
+
+- Bypass is NEVER allowed for critical-risk scenarios, wallet keys, seed phrases, real money, production deployments, or destructive operations.
+- `bypassed` gate status is NOT the same as `pass`. Bypass indicates lower assurance.
+- All bypass reviews require later Codex recheck when `require_later_codex_recheck = true`.
+
 ## 0.1.15 - 2026-05-15
 
 ### Added

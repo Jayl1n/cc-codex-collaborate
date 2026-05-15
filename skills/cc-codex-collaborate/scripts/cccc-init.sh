@@ -11,6 +11,9 @@ ROOT="$(cccc_repo_root)"
 cd "$ROOT"
 cccc_init_dirs
 
+# Ensure bypass reviews directory exists
+mkdir -p docs/cccc/reviews/bypass
+
 NOW="$(cccc_now)"
 SKILL_DIR="$(cccc_skill_dir)"
 TEMPLATE_DIR="$SKILL_DIR/templates/cccc"
