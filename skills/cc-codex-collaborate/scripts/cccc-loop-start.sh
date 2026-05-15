@@ -98,6 +98,59 @@ echo ""
 
 # ── Step 2: Check if an active workflow can be continued ──
 
+# Check docs sync status before continuing
+DOCS_INVALIDATED="$(jq -r '.planning_invalidated_by_doc_change // false' "$STATE" 2>/dev/null || echo 'false')"
+DOCS_STATUS="$(jq -r '.docs_sync_status // "clean"' "$STATE" 2>/dev/null || echo 'clean')"
+LOOP_STATUS="$(jq -r '.status // "UNKNOWN"' "$STATE" 2>/dev/null || echo 'UNKNOWN')"
+
+if [[ "$DOCS_INVALIDATED" == "true" || "$LOOP_STATUS" == "NEEDS_REPLAN" ]]; then
+  echo "CCCC_LOOP_START_RESULT=enabled"
+  echo "CCCC_WORKFLOW_ACTION=needs_replan"
+  echo "CCCC_WORKFLOW_REASON=\"Documentation changes invalidated the current plan.\""
+  echo ""
+  echo "Planning has been invalidated by documentation changes."
+  echo "Run: /cc-codex-collaborate replan"
+  exit 0
+fi
+
+# Check if doc hashes are stale (quick check)
+if [[ -f docs/cccc/doc-index.json ]]; then
+  STALE_DOCS="$(python3 - "$SCRIPT_DIR" <<'PYCHK'
+import sys, json, hashlib
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from cccc_docs import WORKSPACE, TRACKED_DOCS, file_sha256, read_doc_index
+index = read_doc_index()
+stale = []
+for doc_name in TRACKED_DOCS:
+    entry = index.get("documents", {}).get(doc_name, {})
+    old_hash = entry.get("sha256")
+    if old_hash:
+        current_hash = file_sha256(WORKSPACE / doc_name)
+        if current_hash and current_hash != old_hash:
+            stale.append(doc_name)
+if stale:
+    print("stale:" + ",".join(stale))
+else:
+    print("clean")
+PYCHK
+  )" || STALE_DOCS="clean"
+
+  if [[ "$STALE_DOCS" != "clean" ]]; then
+    STALE_LIST="${STALE_DOCS#stale:}"
+    echo "CCCC_LOOP_START_RESULT=enabled"
+    echo "CCCC_WORKFLOW_ACTION=needs_sync_docs"
+    echo "CCCC_WORKFLOW_REASON=\"Tracked documents have changed since last sync: $STALE_LIST\""
+    echo ""
+    echo "Tracked documents have changed since last sync:"
+    echo "  $STALE_LIST"
+    echo ""
+    echo "Run: /cc-codex-collaborate sync-docs"
+    echo "Do not continue old workflow with stale documents."
+    exit 0
+  fi
+fi
+
 DETECT_RESULT="$(python3 "$SCRIPT_DIR/cccc-detect-workflow.py" detect 2>/dev/null || echo '{}')"
 
 WORKFLOW_ACTION="$(echo "$DETECT_RESULT" | jq -r '.action // "needs_task"')"

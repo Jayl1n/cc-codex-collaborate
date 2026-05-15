@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.1.15 - 2026-05-15
+
+### Added
+
+- `/cc-codex-collaborate sync-docs` and `/cccc sync-docs` — Detect and sync manual docs/cccc document changes with interactive decision-making.
+- `/cc-codex-collaborate diff-docs` and `/cccc diff-docs` — Check for document changes without modifying state (read-only).
+- `/cc-codex-collaborate replan` and `/cccc replan` — Re-read project, update planning, and run Codex adversarial plan review.
+- `docs/cccc/doc-index.json` for tracking document hashes and semantic roles.
+- `cccc_docs.py` — Shared module for document hash detection, semantic change classification, and impact levels.
+- `cccc-diff-docs.py` — Diff-docs command script.
+- `cccc-sync-docs.py` — Sync-docs command script with interactive A-F options.
+- `cccc-replan.sh` — Replan command wrapper with state management.
+- Semantic change classification: architecture_change, stack_change, roadmap_change, milestone_change, risk_policy_change, testing_policy_change, brief_change, open_question_change, unknown_high_impact_change.
+- Impact levels: low, medium, high, critical.
+- Interactive sync decisions: adopt and replan, context-only, pause, ignore, view diff, custom input.
+- Planning invalidation on high/critical impact documentation changes.
+- Docs sync gate in loop-start, loop-status, doctor, gates, context-bundle, and Codex plan review prompt.
+- `config.json` docs_sync section with tracked_documents list and invalidation policies.
+- `state.json` docs sync fields: docs_sync_status, docs_changed_since_last_sync, planning_invalidated_by_doc_change, etc.
+- Resume support for `NEEDS_REPLAN` status.
+
+### Changed
+
+- `cccc-loop-start.sh` checks docs sync status before continuing workflow; blocks with `needs_replan` or `needs_sync_docs` actions.
+- `cccc-loop-status.sh` shows docs sync status, doc-index state, and recommended next step.
+- `cccc-doctor.py` checks doc-index.json, tracked docs freshness, and docs_sync config.
+- `cccc-gates.py` shows docs sync gate with implementation-allowed status.
+- `cccc-build-context.sh` includes Document Changes Since Last Sync section.
+- `cccc-resume.sh` handles NEEDS_REPLAN status with replan guidance.
+- `cccc-init.sh` generates doc-index.json from template.
+- `cccc-setup.sh` generates doc-index.json and shows sync-docs tip.
+- `cccc-update.sh` migrates doc-index.json if missing.
+- Codex plan review prompt includes document change rules.
+- README.md and README_EN.md updated with Manual Documentation Sync sections and new commands.
+- SKILL.md updated with Manual Documentation Sync section, sync-docs, diff-docs, replan subcommands, and updated public commands summary.
+- Command templates updated with sync-docs, diff-docs, replan routing and new loop-start actions.
+
 ## 0.1.14 - 2026-05-15
 
 ### Added

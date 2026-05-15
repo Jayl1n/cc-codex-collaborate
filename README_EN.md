@@ -1,7 +1,7 @@
 # CCCC — Claude Code × Codex Collaboration Engine
 
 <p align="center">
-  <strong>Version</strong> 0.1.14 &nbsp;|&nbsp; <strong>Short name</strong> CCCC &nbsp;|&nbsp; <strong>License</strong> MIT
+  <strong>Version</strong> 0.1.15 &nbsp;|&nbsp; <strong>Short name</strong> CCCC &nbsp;|&nbsp; <strong>License</strong> MIT
 </p>
 
 <p align="center">
@@ -215,10 +215,13 @@ Short aliases call the same scripts and behave identically to full commands. The
 /cccc update            Safe workspace migration (sync after upgrade)
 /cccc force-update      Force sync regardless of version number
 /cccc resume            Resume a paused workflow
+/cccc sync-docs         Detect and sync docs/cccc document changes
+/cccc diff-docs         Check for document changes (read-only)
+/cccc replan            Re-plan after documentation changes
 /cccc reset             Reset state machine and rehydrate from docs
 /cccc doctor            Diagnose installation, config, hooks, Codex, gates, context
 /cccc rebuild-context   Rebuild context-bundle.md
-/cccc gates             Show plan/milestone/final/safety gate status
+/cccc gates             Show plan/milestone/final/safety/docs-sync gate status
 /cccc repair            Auto-fix safe inconsistencies
 /cccc trace             Show recent state machine events
 /cccc dev-smoke         Developer self-test
@@ -298,6 +301,35 @@ Resume does NOT bypass safety rules or automatically pass Codex gates. Resume ru
 - If an active workflow can be continued, it immediately continues the state machine.
 - If the workflow is paused, it suggests running `/cc-codex-collaborate resume`.
 - If no task exists, it only enables the loop and prompts: `/cc-codex-collaborate "your task description"`
+
+## Syncing Manual Documentation Changes
+
+docs/cccc is a user-editable planning workspace. If you manually modify architecture, roadmap, milestone, or other documents, run:
+
+```text
+/cccc sync-docs
+```
+
+To only view changes without modifying state:
+
+```text
+/cccc diff-docs
+```
+
+If architecture or roadmap has changed, replan:
+
+```text
+/cccc replan
+```
+
+High-impact changes invalidate old Codex plan approvals. sync-docs presents brainstorm-style options:
+
+- A. Adopt docs and replan (Recommended)
+- B. Only update context-bundle
+- C. Pause workflow
+- D. Ignore changes
+- E. View diff
+- F. Custom input
 
 ## Human-question design
 

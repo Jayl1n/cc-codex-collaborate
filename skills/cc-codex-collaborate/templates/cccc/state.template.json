@@ -1,6 +1,6 @@
 {
   "skill_name": "cc-codex-collaborate",
-  "skill_version": "0.1.14",
+  "skill_version": "0.1.15",
   "workspace": "docs/cccc",
   "workspace_schema_version": 1,
   "last_migration_at": null,
@@ -34,6 +34,14 @@
   "review_round_current": 0,
   "fix_attempts_current": 0,
   "last_context_update": null,
+  "docs_sync_status": "clean",
+  "last_docs_sync_at": null,
+  "docs_changed_since_last_sync": false,
+  "planning_invalidated_by_doc_change": false,
+  "planning_invalidation_reason": null,
+  "last_doc_change_summary": null,
+  "last_doc_change_impact": null,
+  "last_doc_sync_decision": null,
   "created_at": "",
   "updated_at": ""
 }

@@ -1,11 +1,11 @@
 <!-- generated-by: cc-codex-collaborate -->
 <!-- generated-file: true -->
-<!-- template-version: 0.1.14 -->
+<!-- template-version: 0.1.15 -->
 <!-- alias-for: cc-codex-collaborate -->
 
 ---
 description: "Alias for /cc-codex-collaborate. Coordinate Claude Code and Codex in a milestone-based collaboration loop."
-argument-hint: "[task description | setup | update | force-update | resume | reset | doctor | rebuild-context | gates | repair | trace | dev-smoke | codex-check | status | loop-status | loop-start | loop-stop]"
+argument-hint: "[task description | setup | update | force-update | resume | reset | doctor | rebuild-context | gates | repair | trace | dev-smoke | codex-check | sync-docs | diff-docs | replan | status | loop-status | loop-start | loop-stop]"
 ---
 
 This is a short alias for `/cc-codex-collaborate`. Follow the instructions in `.claude/skills/cc-codex-collaborate/SKILL.md` exactly.
@@ -26,6 +26,9 @@ Parse the first argument:
 - **`trace`** — Show recent state machine events. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-trace.py` and present the timeline. Does NOT modify files.
 - **`dev-smoke`** — Developer self-test. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-dev-smoke.sh` and present PASS/FAIL results. Does NOT modify user files.
 - **`codex-check`** — Check Codex CLI availability. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-codex-check.sh` and report.
+- **`sync-docs`** — Detect and sync manual docs/cccc document changes. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-sync-docs.py` and present changes. If `SYNC_AWAITING_DECISION=true`, ask the user with brainstorm-style options (A-F). Does NOT silently overwrite user documents or skip Codex gates.
+- **`diff-docs`** — Check for document changes without modifying state. Run `python3 .claude/skills/cc-codex-collaborate/scripts/cccc-diff-docs.py` and present results. Read-only.
+- **`replan`** — Re-read project and docs, update planning, run Codex adversarial plan review. Run `.claude/skills/cc-codex-collaborate/scripts/cccc-replan.sh` then follow the `===REPLAN_REQUIRED===` instructions. Does NOT start implementation until Codex plan review passes.
 - **`status`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-status.sh` and summarize.
 - **`loop-status`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-loop-status.sh` and summarize.
 - **`loop-start`** — Run `.claude/skills/cc-codex-collaborate/scripts/cccc-loop-start.sh`. **You MUST act on the CCCC_WORKFLOW_ACTION marker immediately. See below.**
@@ -39,6 +42,8 @@ After running cccc-loop-start.sh, check the CCCC_WORKFLOW_ACTION marker in the o
 - **`continue_now`** — **Do NOT summarize and stop.** You MUST immediately read `docs/cccc/config.json` and `docs/cccc/state.json`, determine the current milestone and status, and execute the next state-machine step right now in this same turn. The stop hook will keep you running, but you must start executing immediately. Your very next action must be reading state and executing state machine steps, not writing a summary.
 - **`needs_resume`** — The workflow is paused. Execute `/cccc resume` or tell the user to run it.
 - **`needs_task`** — No active workflow. Tell the user to run `/cccc "task description"`.
+- **`needs_replan`** — Planning invalidated by doc changes. Tell the user to run `/cccc replan`.
+- **`needs_sync_docs`** — Documents changed since last sync. Tell the user to run `/cccc sync-docs`.
 - **`done`** — The workflow is already completed. Tell the user to start a new task.
 
 **For `continue_now`: You are NOT done after running the loop-start script. The script output tells you to continue. Continuing means executing state machine steps NOW, not waiting for the stop hook.**

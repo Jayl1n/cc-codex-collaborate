@@ -112,6 +112,41 @@ is_safe_file() {
   echo "\n## Recent reviews"
   find docs/cccc/reviews -type f -name '*.json' -maxdepth 3 -print -exec tail -120 {} \; 2>/dev/null || true
 
+  echo "\n## Document Changes Since Last Sync"
+  if [[ -f docs/cccc/doc-index.json ]] && [[ -f docs/cccc/state.json ]]; then
+    DOCS_CHANGED="$(python3 -c "
+import json
+st = json.loads(open('docs/cccc/state.json').read())
+print(st.get('docs_changed_since_last_sync', False))
+" 2>/dev/null || echo 'False')"
+    PLANNING_INV="$(python3 -c "
+import json
+st = json.loads(open('docs/cccc/state.json').read())
+print(st.get('planning_invalidated_by_doc_change', False))
+" 2>/dev/null || echo 'False')"
+
+    if [[ "$DOCS_CHANGED" == "True" ]]; then
+      echo "Documents have changed since last sync."
+      python3 -c "
+import json
+st = json.loads(open('docs/cccc/state.json').read())
+summary = st.get('last_doc_change_summary', 'N/A')
+impact = st.get('last_doc_change_impact', 'unknown')
+decision = st.get('last_doc_sync_decision', 'unknown')
+print(f'Summary: {summary}')
+print(f'Impact: {impact}')
+print(f'User decision: {decision}')
+" 2>/dev/null || true
+      if [[ "$PLANNING_INV" == "True" ]]; then
+        echo "Planning is INVALIDATED. Codex plan review must be rerun."
+      fi
+    else
+      echo "No unsynchronized document changes detected."
+    fi
+  else
+    echo "doc-index.json or state.json not found. Cannot determine doc change status."
+  fi
+
 } > "$OUT"
 
 echo "$OUT"

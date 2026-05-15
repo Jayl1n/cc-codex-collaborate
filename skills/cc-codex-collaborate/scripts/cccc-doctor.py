@@ -267,6 +267,59 @@ def check_codex():
             record(level, f"  {gate_name}: {val}")
 
 
+def check_docs_sync():
+    doc_index_path = WORKSPACE / "doc-index.json"
+    if not doc_index_path.exists():
+        record(WARN, "doc-index.json missing", "运行 /cccc sync-docs 初始化索引")
+        return
+    record(PASS, "doc-index.json exists")
+
+    index = read_json(doc_index_path)
+    if not index:
+        record(FAIL, "doc-index.json invalid JSON")
+        return
+
+    tracked = index.get("documents", {})
+    if not tracked:
+        record(WARN, "doc-index.json has no tracked documents", "运行 /cccc sync-docs 初始化索引")
+        return
+    record(PASS, f"  {len(tracked)} documents tracked")
+
+    cfg = read_json(WORKSPACE / "config.json")
+    docs_sync_cfg = (cfg or {}).get("docs_sync", {})
+    if docs_sync_cfg:
+        record(PASS, "config.docs_sync exists")
+    else:
+        record(WARN, "config.docs_sync missing", "运行 /cccc force-update 补齐配置")
+
+    st = read_json(WORKSPACE / "state.json")
+    if st:
+        inv = st.get("planning_invalidated_by_doc_change", False)
+        changed = st.get("docs_changed_since_last_sync", False)
+        sync_status = st.get("docs_sync_status", "unknown")
+        record(PASS if not inv else WARN,
+               f"planning_invalidated_by_doc_change = {inv}",
+               "运行 /cccc replan 重新规划" if inv else "")
+        if changed:
+            record(WARN, f"docs_changed_since_last_sync = {changed}", "运行 /cccc sync-docs")
+
+    sys.path.insert(0, str(Path(__file__).parent))
+    from cccc_docs import file_sha256, TRACKED_DOCS
+    stale_count = 0
+    for doc_name in TRACKED_DOCS:
+        entry = tracked.get(doc_name, {})
+        old_hash = entry.get("sha256")
+        if old_hash:
+            current_hash = file_sha256(WORKSPACE / doc_name)
+            if current_hash and current_hash != old_hash:
+                stale_count += 1
+    if stale_count > 0:
+        record(WARN, f"{stale_count} tracked document(s) changed since last sync",
+               "运行 /cccc sync-docs")
+    else:
+        record(PASS, "All tracked documents up-to-date")
+
+
 def check_context():
     ctx_path = WORKSPACE / "context-bundle.md"
     if not ctx_path.exists():
@@ -313,6 +366,7 @@ def main():
     check_hooks()
     check_commands()
     check_codex()
+    check_docs_sync()
     check_context()
 
     # Output results

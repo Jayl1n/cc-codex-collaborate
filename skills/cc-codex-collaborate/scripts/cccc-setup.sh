@@ -267,6 +267,9 @@ fi
 if [[ -f docs/cccc/state.json ]]; then
   echo "- docs/cccc/state.json"
 fi
+if [[ -f docs/cccc/doc-index.json ]]; then
+  echo "- docs/cccc/doc-index.json"
+fi
 for f in project-brief project-map current-state architecture test-strategy roadmap milestone-backlog decision-log risk-register open-questions context-bundle README; do
   target="docs/cccc/${f}.md"
   if [[ -f "$target" ]]; then
@@ -303,6 +306,10 @@ echo "NOT_ENABLED:"
 echo "- Stop-hook auto-continuation not enabled"
 echo "- .claude/hooks not generated"
 echo "- .claude/settings.json not modified"
+
+echo ""
+echo "TIP:"
+echo "- If you manually edit docs/cccc documents, run /cccc sync-docs to sync changes."
 
 echo ""
 echo "CONFIG_SUMMARY:"

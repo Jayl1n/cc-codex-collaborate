@@ -173,6 +173,39 @@ else
   echo "Auto loop: DISABLED"
 fi
 
+# ── Docs sync status ──
+
+echo ""
+echo "Docs sync:"
+DOC_INDEX="docs/cccc/doc-index.json"
+if [[ -f "$DOC_INDEX" ]]; then
+  echo "  doc-index: present"
+  echo "  docs_sync_status: $(json_value "$STATE" '.docs_sync_status' 'unknown')"
+  echo "  changed_since_last_sync: $(json_value "$STATE" '.docs_changed_since_last_sync' 'unknown')"
+  echo "  planning_invalidated: $(json_value "$STATE" '.planning_invalidated_by_doc_change' 'unknown')"
+  LAST_IMPACT="$(json_value "$STATE" '.last_doc_change_impact' '')"
+  if [[ -n "$LAST_IMPACT" && "$LAST_IMPACT" != "null" ]]; then
+    echo "  last_impact: $LAST_IMPACT"
+  fi
+  LAST_SYNC="$(json_value "$DOC_INDEX" '.last_synced_at' '')"
+  if [[ -n "$LAST_SYNC" && "$LAST_SYNC" != "null" ]]; then
+    echo "  last_synced_at: $LAST_SYNC"
+  fi
+
+  PLANNING_INV="$(json_value "$STATE" '.planning_invalidated_by_doc_change' 'false')"
+  DOCS_CHANGED="$(json_value "$STATE" '.docs_changed_since_last_sync' 'false')"
+  if [[ "$PLANNING_INV" == "True" ]]; then
+    echo "  recommended: /cccc replan"
+  elif [[ "$DOCS_CHANGED" == "True" ]]; then
+    echo "  recommended: /cccc sync-docs"
+  else
+    echo "  recommended: none"
+  fi
+else
+  echo "  doc-index: MISSING"
+  echo "  recommended: /cccc sync-docs (initialize index)"
+fi
+
 # ── Resume guidance ──
 
 echo ""

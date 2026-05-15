@@ -43,3 +43,12 @@ Status rules:
 - `insufficient_context`: Claude must inspect more project files before continuing.
 - `needs_human`: human must choose or clarify before continuing.
 - `unsafe`: plan involves sensitive, destructive, production, real-money, credential, or data-risk actions.
+
+Document change rules:
+
+- Treat manually edited docs/cccc documents as important project intent.
+- If architecture.md, project-brief.md, roadmap.md, or milestone-backlog.md changed since last sync, verify whether the existing plan is still valid.
+- If docs and code disagree, flag the inconsistency.
+- If stack changed (e.g., MySQL to PostgreSQL, Express to Next.js), require updated roadmap, test strategy, and risk register.
+- Do not approve a plan if documentation changes invalidate previous assumptions.
+- If context says `planning_invalidated_by_doc_change = true`, do not approve implementation until the plan has been updated and reviewed.

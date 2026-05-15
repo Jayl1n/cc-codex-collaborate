@@ -56,7 +56,7 @@ mkdir -p "$BACKUP_DIR"
 
 backup_files=()
 
-for f in docs/cccc/config.json docs/cccc/state.json docs/cccc/roadmap.md docs/cccc/milestone-backlog.md docs/cccc/decision-log.md docs/cccc/risk-register.md; do
+for f in docs/cccc/config.json docs/cccc/state.json docs/cccc/doc-index.json docs/cccc/roadmap.md docs/cccc/milestone-backlog.md docs/cccc/decision-log.md docs/cccc/risk-register.md; do
   if [[ -f "$f" ]]; then
     cp "$f" "$BACKUP_DIR/$(basename "$f")"
     backup_files+=("$f")
@@ -128,6 +128,23 @@ if [[ -f "docs/cccc/state.json" ]]; then
     --from-version "$PROJECT_VERSION" \
     --to-version "$SKILL_VERSION" \
     --backup-dir "$BACKUP_DIR"
+fi
+
+# ── Migrate doc-index.json ──
+
+echo ""
+echo "Checking doc-index.json..."
+
+if [[ ! -f "docs/cccc/doc-index.json" ]]; then
+  if [[ -f "$TEMPLATE_DIR/cccc/doc-index.template.json" ]]; then
+    cp "$TEMPLATE_DIR/cccc/doc-index.template.json" docs/cccc/doc-index.json
+    echo "Created docs/cccc/doc-index.json from template."
+  else
+    echo '{"version":1,"last_synced_at":null,"last_diff_at":null,"documents":{},"last_change_summary":null}' > docs/cccc/doc-index.json
+    echo "Created docs/cccc/doc-index.json with defaults."
+  fi
+else
+  echo "doc-index.json already exists. Preserving."
 fi
 
 # ── Sync commands ──

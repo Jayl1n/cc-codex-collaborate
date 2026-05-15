@@ -128,6 +128,30 @@ def check_safety_gate(st: dict):
     print()
 
 
+def check_docs_sync_gate(st: dict):
+    print("Docs sync gate:")
+    sync_status = st.get("docs_sync_status", "unknown")
+    changed = st.get("docs_changed_since_last_sync", False)
+    planning_inv = st.get("planning_invalidated_by_doc_change", False)
+    last_impact = st.get("last_doc_change_impact")
+    impl_allowed = not planning_inv
+
+    print(f"  docs_sync_status: {sync_status}")
+    print(f"  changed_since_last_sync: {changed}")
+    print(f"  planning_invalidated: {planning_inv}")
+    if last_impact:
+        print(f"  last_impact: {last_impact}")
+    print(f"  implementation allowed: {'yes' if impl_allowed else 'no'}")
+
+    if planning_inv:
+        reason = st.get("planning_invalidation_reason", "unknown")
+        print(f"  原因: Planning invalidated by doc changes. {reason}")
+        print(f"  修复: /cccc replan")
+    elif changed:
+        print(f"  原因: Docs changed but not yet synced. Run /cccc sync-docs.")
+    print()
+
+
 def check_testing_gate(st: dict):
     print("Testing gate:")
     # Check if there's recent test info in context or reviews
@@ -168,6 +192,7 @@ def main():
     check_milestone_gate(cfg, st)
     check_final_gate(cfg, st)
     check_safety_gate(st)
+    check_docs_sync_gate(st)
     check_testing_gate(st)
 
     # Next steps

@@ -42,7 +42,7 @@ PREVIOUS_STATUS="$(jq -r '.previous_status // empty' "$STATE")"
 
 # ── Check if resumable ──
 
-RESUMABLE_STATUSES="PAUSED_FOR_HUMAN NEEDS_HUMAN PAUSED_FOR_SYSTEM PAUSED_FOR_CODEX NEEDS_SECRET SENSITIVE_OPERATION UNSAFE FAIL_UNCLEAR REVIEW_THRESHOLD_EXCEEDED"
+RESUMABLE_STATUSES="PAUSED_FOR_HUMAN NEEDS_HUMAN PAUSED_FOR_SYSTEM PAUSED_FOR_CODEX NEEDS_SECRET SENSITIVE_OPERATION UNSAFE FAIL_UNCLEAR REVIEW_THRESHOLD_EXCEEDED NEEDS_REPLAN"
 
 is_resumable() {
   local s="$1"
@@ -298,6 +298,24 @@ case "$STATUS" in
     else
       echo "Claude Code must ask the user before proceeding."
       echo "P0/P1 security issues cannot be skipped."
+    fi
+    ;;
+
+  NEEDS_REPLAN)
+    echo "## Resume guidance: NEEDS_REPLAN"
+    echo ""
+    echo "The workflow requires replanning due to documentation changes."
+    echo ""
+    echo "Options:"
+    echo "  A. Replan (run /cccc replan)"
+    echo "  B. Only update context-bundle, do not replan"
+    echo "  C. Pause workflow, handle manually"
+    echo "  D. Ignore doc changes, continue old workflow"
+    echo "  E. Free-form input"
+    echo ""
+    echo "Default recommendation: A (replan)"
+    if [[ "$STRATEGY" == "replan" || "$STRATEGY" == "recommended" ]]; then
+      echo "Strategy: replan (option A)"
     fi
     ;;
 esac

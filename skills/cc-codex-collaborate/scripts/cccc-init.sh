@@ -64,6 +64,15 @@ if [[ ! -f docs/cccc/state.json ]]; then
   fi
 fi
 
+# Generate doc-index.json if missing
+if [[ ! -f docs/cccc/doc-index.json ]]; then
+  if [[ -f "$TEMPLATE_DIR/doc-index.template.json" ]]; then
+    cp "$TEMPLATE_DIR/doc-index.template.json" docs/cccc/doc-index.json
+  else
+    echo '{"version":1,"last_synced_at":null,"last_diff_at":null,"documents":{},"last_change_summary":null}' > docs/cccc/doc-index.json
+  fi
+fi
+
 # Update state.json: only runtime fields
 CCCC_LANGUAGE="$LANGUAGE" CCCC_NOW="$NOW" python3 - <<'PY'
 import json, pathlib, os

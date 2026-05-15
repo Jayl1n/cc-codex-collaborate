@@ -1,11 +1,11 @@
 {
   "skill": {
     "name": "cc-codex-collaborate",
-    "installed_version": "0.1.14",
+    "installed_version": "0.1.15",
     "workspace_schema_version": 1,
     "last_updated_at": null
   },
-  "version": "0.1.14",
+  "version": "0.1.15",
   "language": {
     "user_language": "auto",
     "auto_detect": true
@@ -58,5 +58,26 @@
     "require_plan_review_before_implementation": true,
     "require_milestone_review_before_pass": true,
     "require_final_review_before_done": true
+  },
+  "docs_sync": {
+    "enabled": true,
+    "track_hashes": true,
+    "require_user_decision_on_high_impact_changes": true,
+    "invalidate_plan_on_architecture_change": true,
+    "invalidate_plan_on_stack_change": true,
+    "invalidate_plan_on_roadmap_change": true,
+    "allow_context_only_for_low_impact_changes": true,
+    "tracked_documents": [
+      "project-brief.md",
+      "project-map.md",
+      "current-state.md",
+      "architecture.md",
+      "test-strategy.md",
+      "roadmap.md",
+      "milestone-backlog.md",
+      "decision-log.md",
+      "risk-register.md",
+      "open-questions.md"
+    ]
   }
 }
