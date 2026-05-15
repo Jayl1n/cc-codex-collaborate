@@ -14,7 +14,7 @@ STAMP="$(date -u +"%Y%m%dT%H%M%SZ")"
 echo "$INPUT" > "$LOG_DIR/stop-$STAMP.json"
 
 if ! command -v jq >/dev/null 2>&1; then
-  echo "[cccc-stop] EXIT: jq not available"
+  echo "[cccc-stop] EXIT: jq not available" >&2
   exit 0
 fi
 
@@ -23,7 +23,7 @@ fi
 STOP_HOOK_ACTIVE="$(echo "$INPUT" | jq -r '.stop_hook_active // false' 2>/dev/null || echo false)"
 
 if [[ ! -f "$CONFIG" || ! -f "$STATE" ]]; then
-  echo "[cccc-stop] EXIT: config.json or state.json not found"
+  echo "[cccc-stop] EXIT: config.json or state.json not found" >&2
   exit 0
 fi
 
@@ -43,34 +43,34 @@ CURRENT_MILESTONE="$(jq -r '.current_milestone_id // empty' "$STATE")"
 # ── Guard conditions ──
 
 if [[ "$LOOP_ENABLED" != "true" ]]; then
-  echo "[cccc-stop] EXIT: loop not enabled (automation.stop_hook_loop_enabled = false)"
+  echo "[cccc-stop] EXIT: loop not enabled (automation.stop_hook_loop_enabled = false)" >&2
   exit 0
 fi
 
 if [[ "$MODE" != "full-auto-safe" ]]; then
-  echo "[cccc-stop] EXIT: mode is '$MODE' (not full-auto-safe)"
+  echo "[cccc-stop] EXIT: mode is '$MODE' (not full-auto-safe)" >&2
   exit 0
 fi
 
 case "$STATUS" in
   DONE|COMPLETED|FAILED|PAUSED_FOR_HUMAN|NEEDS_HUMAN|NEEDS_SECRET|SENSITIVE_OPERATION|UNSAFE|PAUSED_FOR_SYSTEM|PAUSED_FOR_CODEX)
-    echo "[cccc-stop] EXIT: terminal/pause status = $STATUS"
+    echo "[cccc-stop] EXIT: terminal/pause status = $STATUS" >&2
     exit 0
     ;;
 esac
 
 if [[ -n "$PAUSE_REASON" && "$PAUSE_REASON" != "null" ]]; then
-  echo "[cccc-stop] EXIT: pause_reason = '$PAUSE_REASON'"
+  echo "[cccc-stop] EXIT: pause_reason = '$PAUSE_REASON'" >&2
   exit 0
 fi
 
 if [[ "$STOP_HOOK_ACTIVE" == "true" ]]; then
-  echo "[cccc-stop] EXIT: recursion guard (stop_hook_active = true)"
+  echo "[cccc-stop] EXIT: recursion guard (stop_hook_active = true)" >&2
   exit 0
 fi
 
 if [[ "$CONTINUATIONS" -ge "$MAX_CONTINUATIONS" ]]; then
-  echo "[cccc-stop] EXIT: continuation budget exhausted ($CONTINUATIONS >= $MAX_CONTINUATIONS)"
+  echo "[cccc-stop] EXIT: continuation budget exhausted ($CONTINUATIONS >= $MAX_CONTINUATIONS)" >&2
   exit 0
 fi
 
@@ -85,7 +85,7 @@ if [[ "$STATUS" == "SETUP_COMPLETE" ]]; then
     HAS_BACKLOG="yes"
   fi
   if [[ "$HAS_MILESTONE" == "no" && "$HAS_BACKLOG" == "no" ]]; then
-    echo "[cccc-stop] EXIT: SETUP_COMPLETE with no milestone or backlog (would empty-spin)"
+    echo "[cccc-stop] EXIT: SETUP_COMPLETE with no milestone or backlog (would empty-spin)" >&2
     exit 0
   fi
 fi
@@ -98,7 +98,7 @@ python3 "$ROOT/.claude/skills/cc-codex-collaborate/scripts/cccc-update-state.py"
 
 # ── Block the stop and instruct Claude to continue ──
 
-echo "[cccc-stop] BLOCK: continuing loop (status=$STATUS, milestone=$CURRENT_MILESTONE, continuations=$((CONTINUATIONS + 1))/$MAX_CONTINUATIONS)"
+echo "[cccc-stop] BLOCK: continuing loop (status=$STATUS, milestone=$CURRENT_MILESTONE, continuations=$((CONTINUATIONS + 1))/$MAX_CONTINUATIONS)" >&2
 
 jq -n \
   --arg status "$STATUS" \

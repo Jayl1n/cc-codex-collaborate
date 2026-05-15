@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.12 - 2026-05-15
+
+### Fixed
+
+- **P0**: Stop hook stdout now contains only JSON. Previously, human-readable log messages (`[cccc-stop] BLOCK:...`, `[cccc-stop] EXIT:...`) were mixed with JSON output on stdout, causing Claude Code to fail parsing the `decision: "block"` response and stop anyway. All log messages now go to stderr (`>&2`), ensuring reliable block behavior.
+
+### Changed
+
+- Command templates use CRITICAL-level emphasis to prevent Claude Code from summarizing and stopping after loop-start when `continue_now` is detected. Claude Code must immediately execute state machine steps instead of waiting for the stop hook.
+
 ## 0.1.10 - 2026-05-15
 
 ### Added
@@ -173,9 +183,3 @@
 
 - Initial Claude Code + Codex collaboration skill.
 - Project discovery, planning, Claude self-review, Codex adversarial plan review, milestone loop, safety gates, language detection, and brainstorming-style human questions.
-
-## 0.1.11 - 2026-05-15
-
-### Changed
-
-- Command templates now use CRITICAL-level emphasis to prevent Claude Code from summarizing and stopping after loop-start when `continue_now` is detected. Claude Code must immediately execute state machine steps instead of waiting for the stop hook.

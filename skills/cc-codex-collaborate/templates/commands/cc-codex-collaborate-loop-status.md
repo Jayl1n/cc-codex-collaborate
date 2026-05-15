@@ -1,6 +1,6 @@
 <!-- generated-by: cc-codex-collaborate -->
 <!-- generated-file: true -->
-<!-- template-version: 0.1.11 -->
+<!-- template-version: 0.1.12 -->
 
 ---
 description: Show cc-codex-collaborate loop and hooks status.
