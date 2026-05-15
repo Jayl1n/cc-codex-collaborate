@@ -1,7 +1,7 @@
 # CCCC — Claude Code × Codex Collaboration Engine
 
 <p align="center">
-  <strong>Version</strong> 0.1.8 &nbsp;|&nbsp; <strong>Short name</strong> CCCC &nbsp;|&nbsp; <strong>License</strong> MIT
+  <strong>Version</strong> 0.1.9 &nbsp;|&nbsp; <strong>Short name</strong> CCCC &nbsp;|&nbsp; <strong>License</strong> MIT
 </p>
 
 <p align="center">
@@ -202,20 +202,20 @@ Use `/cc-codex-collaborate-loop-status` to check whether update is recommended.
 /cc-codex-collaborate <task>       Start the full collaboration loop
 /cc-codex-collaborate setup        Interactive configuration wizard (first-time entry point)
 /cc-codex-collaborate update       Safe workspace migration (sync after upgrade)
+/cc-codex-collaborate resume       Resume a paused workflow
 /cc-codex-collaborate plan         Generate/update the plan
 /cc-codex-collaborate plan-review  Trigger plan review
 /cc-codex-collaborate run          Run the current milestone
 /cc-codex-collaborate review       Trigger milestone review
 /cc-codex-collaborate status       Show current status
-/cc-codex-collaborate resume       Resume an interrupted task
 ```
 
 ### Loop automation commands
 
 | Command | Purpose |
 | --- | --- |
-| `/cc-codex-collaborate-loop-status` | Show config/state status, loop mode, and hook configuration |
-| `/cc-codex-collaborate-loop-start` | Enable Stop-hook auto-continuation (`full-auto-safe` mode) |
+| `/cc-codex-collaborate-loop-status` | Show config/state status, loop mode, hook configuration, and resume guidance |
+| `/cc-codex-collaborate-loop-start` | Enable Stop-hook auto-continuation; if active workflow exists, continue immediately |
 | `/cc-codex-collaborate-loop-stop` | Disable loop automation and remove CCCC hook registrations |
 
 ## Hook behavior
@@ -237,6 +237,33 @@ To disable auto-continuation:
 ```text
 /cc-codex-collaborate-loop-stop
 ```
+
+## Resuming a paused workflow
+
+When a workflow is paused due to human input, Codex unavailability, system errors, review thresholds, or safety issues, use resume to continue:
+
+```text
+/cc-codex-collaborate resume
+```
+
+Resume does NOT bypass safety rules or automatically pass Codex gates. Resume rules by status:
+
+| Paused status | Resume rule |
+| --- | --- |
+| `PAUSED_FOR_HUMAN` / `NEEDS_HUMAN` | Resume only after user answers open questions |
+| `PAUSED_FOR_CODEX` | Resume only when Codex is available; must re-run the missing Codex gate |
+| `PAUSED_FOR_SYSTEM` | Resume only after user confirms the system error is resolved |
+| `NEEDS_SECRET` | Resume only after user configures secret locally or chooses mock |
+| `SENSITIVE_OPERATION` / `UNSAFE` | Resume only with user's explicit safe alternative; real money/production ops prohibited |
+| `REVIEW_THRESHOLD_EXCEEDED` | Resume only after user chooses to extend review, record risk, or pause |
+
+## Does loop-start begin execution?
+
+`/cc-codex-collaborate-loop-start` enables stop-hook auto-continuation.
+
+- If an active workflow can be continued, it immediately continues the state machine.
+- If the workflow is paused, it suggests running `/cc-codex-collaborate resume`.
+- If no task exists, it only enables the loop and prompts: `/cc-codex-collaborate "your task description"`
 
 ## Human-question design
 

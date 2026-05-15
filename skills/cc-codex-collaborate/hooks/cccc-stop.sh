@@ -53,7 +53,7 @@ if [[ "$MODE" != "full-auto-safe" ]]; then
 fi
 
 case "$STATUS" in
-  DONE|COMPLETED|FAILED|PAUSED_FOR_HUMAN|NEEDS_HUMAN|NEEDS_SECRET|SENSITIVE_OPERATION|UNSAFE|PAUSED_FOR_SYSTEM)
+  DONE|COMPLETED|FAILED|PAUSED_FOR_HUMAN|NEEDS_HUMAN|NEEDS_SECRET|SENSITIVE_OPERATION|UNSAFE|PAUSED_FOR_SYSTEM|PAUSED_FOR_CODEX)
     echo "[cccc-stop] EXIT: terminal/pause status = $STATUS"
     exit 0
     ;;
@@ -72,6 +72,22 @@ fi
 if [[ "$CONTINUATIONS" -ge "$MAX_CONTINUATIONS" ]]; then
   echo "[cccc-stop] EXIT: continuation budget exhausted ($CONTINUATIONS >= $MAX_CONTINUATIONS)"
   exit 0
+fi
+
+# Prevent empty spin: SETUP_COMPLETE with no milestone and no backlog
+if [[ "$STATUS" == "SETUP_COMPLETE" ]]; then
+  HAS_MILESTONE="no"
+  if [[ -n "$CURRENT_MILESTONE" && "$CURRENT_MILESTONE" != "null" ]]; then
+    HAS_MILESTONE="yes"
+  fi
+  HAS_BACKLOG="no"
+  if [[ -f "$ROOT/docs/cccc/roadmap.md" || -f "$ROOT/docs/cccc/milestone-backlog.md" ]]; then
+    HAS_BACKLOG="yes"
+  fi
+  if [[ "$HAS_MILESTONE" == "no" && "$HAS_BACKLOG" == "no" ]]; then
+    echo "[cccc-stop] EXIT: SETUP_COMPLETE with no milestone or backlog (would empty-spin)"
+    exit 0
+  fi
 fi
 
 # ── Increment continuation counter ──
@@ -93,11 +109,14 @@ jq -n \
     decision: "block",
     reason: (
       "Continue the cc-codex-collaborate state machine. " +
+      "The stop-hook is NOT a background worker — it only prevents Claude Code from stopping prematurely. " +
+      "You must execute multiple state-machine steps within this continuation. " +
+      "Do not stop after a single small step. " +
       "Loop mode is enabled in docs/cccc/config.json (automation.stop_hook_loop_enabled = true, mode = full-auto-safe). " +
       "Current status: " + $status + ". " +
       "Current milestone: " + ($milestone // "") + ". " +
       "Stop-hook continuation budget: " + ($next_continuations|tostring) + "/" + ($max_continuations|tostring) + ". " +
-      "Do not stop after a single small step. Continue executing safe state-machine steps inside the current continuation until one of these conditions is reached: DONE, COMPLETED, FAILED, PAUSED_FOR_HUMAN, NEEDS_HUMAN, NEEDS_SECRET, SENSITIVE_OPERATION, UNSAFE, PAUSED_FOR_SYSTEM, Codex review threshold exceeded, or continuation budget exhausted. " +
+      "Continue executing safe state-machine steps until one of these conditions is reached: DONE, COMPLETED, FAILED, PAUSED_FOR_HUMAN, NEEDS_HUMAN, NEEDS_SECRET, SENSITIVE_OPERATION, UNSAFE, PAUSED_FOR_SYSTEM, PAUSED_FOR_CODEX, Codex review threshold exceeded, or continuation budget exhausted. " +
       "Do not bypass human-intervention, secret, production, wallet, real-money, destructive-operation, or threshold pause conditions."
     )
   }'

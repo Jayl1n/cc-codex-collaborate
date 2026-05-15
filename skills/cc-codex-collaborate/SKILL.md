@@ -198,7 +198,7 @@ Runtime generation rules:
 After setup, this package provides three explicit slash-command wrappers for loop automation:
 
 - `/cc-codex-collaborate-loop-status`: inspect `docs/cccc/config.json`, `docs/cccc/state.json`, hook files, and `.claude/settings.json` hook registrations.
-- `/cc-codex-collaborate-loop-start`: enable full-auto-safe loop continuation by installing cccc hook scripts into `.claude/hooks`, registering them in `.claude/settings.json`, and updating `config.json` automation settings.
+- `/cc-codex-collaborate-loop-start`: enable full-auto-safe loop continuation by installing cccc hook scripts into `.claude/hooks`, registering them in `.claude/settings.json`, and updating `config.json` automation settings. If an active workflow exists, immediately continue the state machine. If no workflow exists, prompt the user to start a task. If the workflow is paused, suggest `/cc-codex-collaborate resume`.
 - `/cc-codex-collaborate-loop-stop`: disable loop automation by removing only cccc hook registrations from `.claude/settings.json` and updating `config.json` to disable the loop.
 
 Do not enable Stop-hook automation implicitly. The user must explicitly run `/cc-codex-collaborate-loop-start`.
@@ -211,6 +211,7 @@ Interpret the first argument after `/cc-codex-collaborate` as a subcommand when 
 
 - `setup`: run `scripts/cccc-setup.sh`, the interactive configuration wizard. Do not start planning or implementation.
 - `update`: run `scripts/cccc-update.sh`, safe workspace migration after skill upgrade. Sync config/state fields, commands, and enabled hooks. Does NOT start any task, does NOT enable hooks, does NOT run Codex review.
+- `resume`: resume a paused workflow. See "Resume command" section below.
 - `status`: run `scripts/cccc-status.sh` and summarize.
 - `loop-status`: run `scripts/cccc-loop-status.sh` and summarize.
 - `loop-start`: run `scripts/cccc-loop-start.sh` and summarize.
@@ -224,9 +225,10 @@ If no known subcommand is provided, treat the arguments as the user's coding tas
 | --- | --- |
 | `/cc-codex-collaborate setup` | First-time setup. Interactive configuration wizard. Generates docs/cccc and .claude/commands. Does NOT enable hooks. |
 | `/cc-codex-collaborate update` | Safe migration after skill upgrade. Syncs config/state fields, commands, enabled hooks. Does NOT overwrite user planning/review history. Does NOT enable hooks if not already enabled. |
+| `/cc-codex-collaborate resume` | Resume a paused workflow. Does NOT bypass Codex gates, safety pauses, or secret requirements. |
 | `/cc-codex-collaborate "task"` | Start user's free-form task description. Full collaboration loop. |
-| `/cc-codex-collaborate-loop-status` | Show loop/hooks/Codex gates/version status. |
-| `/cc-codex-collaborate-loop-start` | Enable stop-hook auto-continuation. |
+| `/cc-codex-collaborate-loop-status` | Show loop/hooks/Codex gates/version status. Includes resume guidance. |
+| `/cc-codex-collaborate-loop-start` | Enable stop-hook auto-continuation. If active workflow exists, immediately continue state machine. |
 | `/cc-codex-collaborate-loop-stop` | Disable stop-hook auto-continuation. |
 
 ## Update command
@@ -248,6 +250,92 @@ Update behavior:
 - Syncs hooks: only if loop already enabled. Does NOT enable hooks if not already enabled.
 - Does NOT change `automation.stop_hook_loop_enabled` or `mode`.
 - Outputs migration report with version info and file changes.
+
+## Resume command
+
+When invoked with `resume`, Claude Code must recover a paused workflow without bypassing safety rules.
+
+### Resume flow
+
+1. Read `docs/cccc/config.json` and `docs/cccc/state.json`.
+2. Explain why the workflow is paused (status + pause_reason).
+3. If the status allows automatic resume (e.g. `READY_TO_CONTINUE`), call `cccc-resume.sh` and continue the state machine.
+4. If the status requires user confirmation or answers, use the user's primary language with brainstorm-style options.
+5. After user confirms:
+   - Write to `docs/cccc/decision-log.md`
+   - Update `docs/cccc/open-questions.md` if applicable
+   - Update `docs/cccc/state.json`:
+     - `previous_status` = old status
+     - `status` = `READY_TO_CONTINUE`
+     - `resume_reason` = reason for resuming
+     - `resume_strategy` = selected strategy
+     - `last_resumed_at` = UTC timestamp
+     - `stop_hook_continuations` = 0
+     - `pause_reason` = null
+   - Do NOT mark any milestone as passed.
+   - Do NOT mark the task as DONE.
+   - Do NOT mark any Codex gate as pass.
+6. If `config.mode = full-auto-safe` and `automation.stop_hook_loop_enabled = true`:
+   - Resume must immediately continue executing the state machine.
+   - Do not just output "resumed" and stop.
+7. If `mode != full-auto-safe`:
+   - After resume, output next-step suggestions. Do not force auto-continue.
+
+### Safe resume rules by status
+
+**PAUSED_FOR_HUMAN / NEEDS_HUMAN:**
+- If `pause_reason` or `open-questions.md` has unanswered questions, ask the user first.
+- Brainstorm-style options: A. recommended approach, B. conservative approach, C. skip milestone, D. continue with risk recorded, E. free input.
+- After answer: write decision-log, update open-questions, set status to `READY_TO_CONTINUE`.
+- Do NOT mark milestone as passed. Must re-enter the appropriate gate (e.g. Codex review).
+
+**PAUSED_FOR_CODEX:**
+- Run `cccc-codex-check.sh` first.
+- If Codex is still unavailable: remain `PAUSED_FOR_CODEX`, output reason.
+- If Codex is available: clear `codex_unavailable_reason`, set status to `READY_TO_CONTINUE`.
+- Must re-run the missing Codex gate (plan/milestone/final review). Resume does NOT skip Codex.
+
+**PAUSED_FOR_SYSTEM:**
+- Remind user that a system/API error caused the pause.
+- Options: A. checked logs, continue, B. view StopFailure logs, C. exit, D. free input.
+- User must explicitly confirm. If no confirmation, do not continue.
+- On continue: record in decision-log, reset `stop_hook_continuations = 0`, set `READY_TO_CONTINUE`.
+
+**NEEDS_SECRET:**
+- Default: cannot resume.
+- Remind user: do NOT send real secrets, API keys, wallet private keys, or seed phrases to Claude.
+- Options: A. configured locally, continue, B. use mock/dummy/test fixture, C. skip milestone, D. exit.
+- If A or B: record decision-log (NO secret values), set `READY_TO_CONTINUE`.
+- If C: mark milestone as blocked/skipped, record risk.
+
+**SENSITIVE_OPERATION / UNSAFE:**
+- Default: do not auto-resume.
+- Options: A. remain paused, B. switch to safe alternative, C. confirm safe local test, D. skip milestone, E. free input.
+- Prohibited resume: real money, mainnet transactions, real wallet keys, production deployments, destructive irreversible operations.
+- Unless user provides a safe alternative, remain paused.
+
+**FAIL_UNCLEAR / REVIEW_THRESHOLD_EXCEEDED:**
+- Options: A. pause for manual intervention, B. extend review budget +1 round, C. record risk and proceed, D. skip milestone, E. free input.
+- If B: increase review budget, record decision-log, set `READY_TO_CONTINUE`.
+- If C or D: must record known risk. Cannot skip P0/P1 security issues.
+
+### Non-interactive resume
+
+The resume script supports non-interactive arguments:
+- `--confirm`: confirm the resume action
+- `--strategy recommended`: use recommended approach
+- `--strategy mock`: use mock/dummy secrets
+- `--strategy skip`: skip current milestone
+- `--strategy extend-review`: extend review budget +1
+
+### Resume script
+
+Run:
+```bash
+.claude/skills/cc-codex-collaborate/scripts/cccc-resume.sh [--confirm] [--strategy <strategy>]
+```
+
+The script only updates state and outputs guidance. It does NOT execute Codex review or implement code. The actual continuation is driven by the SKILL.md state machine.
 
 ## Role separation
 
@@ -353,6 +441,14 @@ CODEX_MILESTONE_REVIEW
   ├─ NEEDS_HUMAN → PAUSE_FOR_HUMAN
   ├─ SENSITIVE_OPERATION → PAUSE_FOR_HUMAN
   └─ MAX_REVIEW_EXCEEDED → THRESHOLD_POLICY
+
+PAUSED_FOR_HUMAN / NEEDS_HUMAN / PAUSED_FOR_SYSTEM
+PAUSED_FOR_CODEX / NEEDS_SECRET / SENSITIVE_OPERATION
+UNSAFE / FAIL_UNCLEAR / REVIEW_THRESHOLD_EXCEEDED
+  ↓ (resume with /cc-codex-collaborate resume)
+READY_TO_CONTINUE
+  ↓ (re-enter appropriate gate)
+  └─→ CODEX_ADVERSARIAL_PLAN_REVIEW / CODEX_MILESTONE_REVIEW / IMPLEMENT_MILESTONE
 ```
 
 No implementation may start until project discovery is complete and the initial roadmap has passed Claude self-review plus Codex adversarial plan review, unless the human explicitly chooses to override after a pause.
@@ -618,10 +714,13 @@ It may block the stop (returning `decision: "block"`) only when all of these con
 - `docs/cccc/config.json` exists and `automation.stop_hook_loop_enabled` is `true`
 - `docs/cccc/config.json` `mode` is `full-auto-safe`
 - `docs/cccc/state.json` exists
-- `status` is not a terminal or paused state (DONE, COMPLETED, FAILED, PAUSED_FOR_HUMAN, NEEDS_HUMAN, NEEDS_SECRET, SENSITIVE_OPERATION, UNSAFE, PAUSED_FOR_SYSTEM)
+- `status` is not a terminal or paused state (DONE, COMPLETED, FAILED, PAUSED_FOR_HUMAN, NEEDS_HUMAN, NEEDS_SECRET, SENSITIVE_OPERATION, UNSAFE, PAUSED_FOR_SYSTEM, PAUSED_FOR_CODEX)
 - `pause_reason` is empty
 - `stop_hook_active` in the hook input is not `true` (prevents infinite recursion)
 - continuation count is below `automation.max_stop_hook_continuations` (from config.json)
+- `status` is not `SETUP_COMPLETE` with no milestone and no backlog (prevents empty-spin)
+
+The stop hook allows `READY_TO_CONTINUE` status to proceed — this is the status set after a successful resume.
 
 When the hook blocks, it outputs a `reason` that instructs Claude to continue the state machine loop internally — not just take one small step and stop again. The skill's internal state machine must drive the actual loop; the hook merely prevents Claude Code from stopping prematurely.
 

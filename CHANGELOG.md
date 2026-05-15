@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.9 - 2026-05-15
+
+### Added
+
+- `/cc-codex-collaborate resume` — Resume a paused workflow with safe, status-specific recovery rules.
+- `cccc-resume.sh` — Resume script with non-interactive `--strategy` and `--confirm` arguments.
+- Safe resume semantics: each pause status has specific recovery rules (human questions, Codex check, system error confirmation, secret configuration, sensitive operation alternatives, review budget extension).
+- `READY_TO_CONTINUE` status for post-resume state machine re-entry.
+- State fields: `previous_status`, `resume_reason`, `resume_strategy`, `last_resumed_at`, `last_human_decision`.
+- Machine-readable loop-start markers: `CCCC_LOOP_START_RESULT`, `CCCC_WORKFLOW_ACTION`, `CCCC_WORKFLOW_REASON`.
+- Loop-status resume guidance: suggests next action based on current status.
+- Stop-hook empty-spin prevention: `SETUP_COMPLETE` with no milestone/backlog does not block.
+- Stop-hook supports `READY_TO_CONTINUE` and `PAUSED_FOR_CODEX` in pause-state list.
+
+### Changed
+
+- `/cc-codex-collaborate-loop-start` now checks for active workflows after enabling hooks. Outputs `CCCC_WORKFLOW_ACTION=continue_now|needs_resume|needs_task|done` with human guidance.
+- Stop-hook reason now emphasizes it is not a background worker and Claude Code must execute multiple state-machine steps per continuation.
+- Loop-start output no longer writes `state.json: mode = full-auto-safe` (mode belongs to config.json only).
+- README (zh/en) updated with Resume and loop-start behavior sections.
+- SKILL.md updated with Resume command section, updated state machine, updated loop-start semantics.
+
 ## 0.1.8 - 2026-05-15
 
 ### Added

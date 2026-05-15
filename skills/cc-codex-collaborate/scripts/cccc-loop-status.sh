@@ -172,3 +172,40 @@ if [[ "$loop_enabled_in_config" == "True" ]] && [[ "$stop_hook_registered" == "y
 else
   echo "Auto loop: DISABLED"
 fi
+
+# ── Resume guidance ──
+
+echo ""
+
+if [[ -f "$STATE" ]]; then
+  RESUME_STATUS="$(json_value "$STATE" '.status' 'unknown')"
+  case "$RESUME_STATUS" in
+    PAUSED_FOR_HUMAN|NEEDS_HUMAN)
+      echo "Next: /cc-codex-collaborate resume"
+      ;;
+    PAUSED_FOR_CODEX)
+      echo "Next: configure Codex locally, then /cc-codex-collaborate resume"
+      ;;
+    PAUSED_FOR_SYSTEM)
+      echo "Next: inspect docs/cccc/logs/stop-failure-*.json, then /cc-codex-collaborate resume"
+      ;;
+    NEEDS_SECRET|SENSITIVE_OPERATION|UNSAFE|FAIL_UNCLEAR|REVIEW_THRESHOLD_EXCEEDED)
+      echo "Next: /cc-codex-collaborate resume"
+      ;;
+    DONE|COMPLETED|FAILED)
+      echo "Next: /cc-codex-collaborate \"your task\""
+      ;;
+    NOT_INITIALIZED|SETUP_COMPLETE)
+      echo "Next: /cc-codex-collaborate \"your task\""
+      ;;
+    *)
+      if [[ "$loop_enabled_in_config" == "True" ]]; then
+        echo "Next: /cc-codex-collaborate resume or wait for Stop hook continuation"
+      else
+        echo "Next: /cc-codex-collaborate \"your task\""
+      fi
+      ;;
+  esac
+else
+  echo "Next: /cc-codex-collaborate \"your task\""
+fi

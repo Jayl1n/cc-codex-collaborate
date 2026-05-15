@@ -1,6 +1,6 @@
 <!-- generated-by: cc-codex-collaborate -->
 <!-- generated-file: true -->
-<!-- template-version: 0.1.8 -->
+<!-- template-version: 0.1.9 -->
 
 ---
 description: Show cc-codex-collaborate loop and hooks status.
@@ -15,4 +15,4 @@ Execute:
 .claude/skills/cc-codex-collaborate/scripts/cccc-loop-status.sh
 ```
 
-Then summarize the result in the user's primary language.
+Then summarize the result in the user's primary language. Include the "Next:" resume guidance if a paused or resumable workflow is detected.
