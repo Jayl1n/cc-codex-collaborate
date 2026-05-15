@@ -1,6 +1,6 @@
 ---
 name: cc-codex-collaborate
-version: 0.1.17
+version: 0.1.18
 description: Coordinate Claude Code and Codex in a milestone-based collaboration loop. Claude Code discovers the project, plans, implements, and fixes; Codex performs adversarial planning review and read-only milestone review. Working documents are stored under docs/cccc.
 argument-hint: "[task description]"
 ---
@@ -17,993 +17,115 @@ The working document root is always:
 docs/cccc
 ```
 
-Do not use `.agent-loop` for this skill.
+## Core invariants
 
-## First-run setup
+These rules are non-negotiable and apply at all times:
 
-The first user-facing action after installation should be:
+1. **No Codex plan review, no implementation.**
+2. **No Codex milestone review, no milestone pass.**
+3. **No Codex final review, no task completion.**
+4. **Codex unavailable means pause, not skip.**
+5. **Hard pause conditions** (secrets, wallet keys, production, real money, destructive ops, threshold failures) **never auto-continue**.
+6. **All thresholds read from `docs/cccc/config.json`**. If missing, prompt user to run `/cccc setup`.
+7. **Runtime state read from `docs/cccc/state.json`**.
+8. **Detect and use the user's primary language** throughout all human-facing output.
+9. **Context bundle before every Codex call** — regenerate `docs/cccc/context-bundle.md`.
+10. **Bypass is NOT pass** — `bypassed` gate status indicates lower assurance.
 
-```text
-/cc-codex-collaborate setup
-```
+## Documentation loading map
 
-Setup is an **interactive configuration wizard** conducted by Claude Code (you). It does NOT start any task, does NOT enable hooks, and does NOT modify `.claude/settings.json`.
+Detailed behavior rules are split into focused documents. Load them as needed:
 
-### Setup wizard flow
-
-When invoked with `setup`, you must conduct the interactive wizard in the user's primary language. Follow this flow:
-
-#### 1. Detect user language
-
-Detect the user's primary language from:
-1. Explicit user preference
-2. The language of the current message
-3. If unclear, default to the language of the most recent user message
-
-#### 2. Opening message
-
-Display in the user's language:
-
-> I will initialize cc-codex-collaborate for this project. This generates `.claude/commands` and `docs/cccc`, but does not enable hooks or start any task.
-
-#### 3. Handle existing config first
-
-If `docs/cccc/config.json` already exists, ask the user before proceeding:
-
-> A. Keep existing config, only fill missing files
-> B. Interactively update parts of the config
-> C. Backup and rebuild config
-> D. Exit
-
-If C is chosen, backup to `docs/cccc/backups/config.<timestamp>.json` before proceeding.
-
-If A is chosen, run `cccc-setup.sh keep [language]` and skip the preset selection.
-
-#### 4. Ask configuration mode (only if no existing config, or user chose B/C)
-
-Present choices using `AskUserQuestion`:
-
-> A. Quick setup: recommended defaults for most projects (recommended)
-> B. Strict setup: stronger review, smaller milestones, easier to pause
-> C. Custom setup: configure thresholds and behavior step by step
-> D. Import config: from existing `docs/cccc/config.json` or template
-> E. Exit setup
-
-Default: A.
-
-#### 5. Preset details
-
-**A. Quick / recommended preset:**
-- mode: supervised-auto
-- max_plan_review_rounds: 3
-- max_milestones_per_run: 5, max_diff_lines: 1200, max_changed_files: 20
-- max_review_rounds_per_milestone: 3, max_fix_attempts: 3
-- block_on_p0: true, block_on_p1: true, allow_continue_with_p2: true
-- stop_hook_loop_enabled: false
-
-**B. Strict preset:**
-- mode: supervised-auto
-- max_plan_review_rounds: 4
-- max_milestones_per_run: 3, max_diff_lines: 600, max_changed_files: 10
-- max_review_rounds_per_milestone: 4, max_fix_attempts: 2
-- block_on_p0: true, block_on_p1: true, allow_continue_with_p2: false
-- stop_hook_loop_enabled: false
-
-**C. Custom setup — ask these questions one at a time:**
-
-1. **User language**: A. Auto detect (recommended) B. 简体中文 C. English D. Other
-2. **Collaboration mode**: A. manual B. supervised-auto (recommended) C. full-auto-safe D. Custom
-3. **Planning review strength**: A. Standard (recommended) B. Strict (4 rounds) C. Very strict (5 rounds, ask on any uncertainty) D. Custom
-4. **Milestone granularity**: A. Small steps (600 diff, 10 files) B. Standard (1200 diff, 20 files) (recommended) C. Large steps (2500 diff, 40 files) D. Custom
-5. **Review thresholds**: max review rounds (default 3), max fix attempts (default 3), block P1 (default yes), allow P2 (default yes)
-6. **Auto loop**: A. Not enabled (recommended) B. Decide later C. Enable now (warning: changes Claude Code stop behavior)
-
-If the user chooses "Enable now" for auto loop, warn that stop-hook will change Claude Code's stop behavior, and ask for explicit confirmation before modifying `.claude/settings.json`. Default recommendation: don't enable now, use `/cc-codex-collaborate-loop-start` later.
-
-**D. Import**: Use existing `docs/cccc/config.json` as-is, or use recommended defaults if no config found.
-
-#### 6. Execute setup script
-
-After gathering the user's choices, build the config and run:
-
-```bash
-# For quick/strict presets:
-.claude/skills/cc-codex-collaborate/scripts/cccc-setup.sh recommended [language]
-.claude/skills/cc-codex-collaborate/scripts/cccc-setup.sh strict [language]
-
-# For custom config, write JSON to a temp file and pipe it:
-cat /tmp/cccc-custom-config.json | .claude/skills/cc-codex-collaborate/scripts/cccc-setup.sh custom [language]
-
-# For import/keep:
-.claude/skills/cc-codex-collaborate/scripts/cccc-setup.sh import [language]
-.claude/skills/cc-codex-collaborate/scripts/cccc-setup.sh keep [language]
-```
-
-#### 7. Setup summary
-
-After the script completes, output a summary in the user's language:
-
-- List generated files
-- List preserved files (not overwritten)
-- List what was NOT enabled (hooks, settings.json)
-- Show current configuration (mode, language, review rounds, diff lines, file limit, sensitive ops policy)
-- Show next steps:
-  - Start a task: `/cc-codex-collaborate "your free-form task description"`
-  - Check loop status: `/cc-codex-collaborate-loop-status`
-  - Enable auto-continuation: `/cc-codex-collaborate-loop-start`
-
-Setup should explain:
-
-- generated command files
-- generated `docs/cccc` files (including config.json and state.json)
-- that hooks were not enabled
-- that loop automation can be enabled later with `/cc-codex-collaborate-loop-start`
-- current configuration summary (mode, language, thresholds)
-
-## Configuration presets
-
-Setup offers three configuration presets:
-
-### A. Recommended (default)
-
-Standard settings for most projects: `supervised-auto` mode, 3 review rounds, 1200 diff lines, 20 files per milestone, P1 blocks, P2 allowed.
-
-### B. Strict
-
-For high-risk projects: 4 review rounds, 600 diff lines, 10 files, 4 review rounds per milestone, 2 fix attempts, P2 also blocks.
-
-### C. Custom
-
-Step-by-step configuration of: language, mode, planning review strength, milestone granularity, review thresholds, and auto-loop behavior.
-
-## Config vs State
-
-`docs/cccc/config.json` is the project-level configuration. It stores:
-
-- language settings
-- collaboration mode
-- planning thresholds
-- milestone granularity
-- review thresholds
-- automation settings
-- safety policies
-- codex behavior
-
-`docs/cccc/state.json` is runtime state only:
-
-- current milestone
-- current status
-- review round counts
-- pause reason
-- completed/blocked milestones
-- last context update
-- loop continuation count
-
-All planning, review, and milestone thresholds must read from `config.json`. If `config.json` does not exist, prompt the user to run setup first.
-
-## Command bootstrap model
-
-The release zip should not require users to copy `.claude/commands/`, `.claude/hooks/`, or `docs/cccc/` manually.
-
-The zip includes only the skill, scripts, prompts, schemas, hooks templates, and command templates.
-
-Runtime generation rules:
-
-- `/cc-codex-collaborate setup` generates `.claude/commands/` and `docs/cccc/` (including config.json and state.json). It does NOT generate `.claude/hooks/` or modify `.claude/settings.json`.
-- `/cc-codex-collaborate-loop-start` generates `.claude/hooks/`, updates `.claude/settings.json`, sets `config.json` `automation.stop_hook_loop_enabled` to `true`, and sets `state.json` mode to `full-auto-safe`.
-- `/cc-codex-collaborate-loop-stop` removes only this skill's hook registrations from `.claude/settings.json`, sets `config.json` `automation.stop_hook_loop_enabled` to `false`, and reverts `state.json` mode to `supervised-auto`.
-
-## Loop control commands
-
-After setup, this package provides three explicit slash-command wrappers for loop automation:
-
-- `/cc-codex-collaborate-loop-status`: inspect `docs/cccc/config.json`, `docs/cccc/state.json`, hook files, and `.claude/settings.json` hook registrations.
-- `/cc-codex-collaborate-loop-start`: enable full-auto-safe loop continuation by installing cccc hook scripts into `.claude/hooks`, registering them in `.claude/settings.json`, and updating `config.json` automation settings. If an active workflow exists, immediately continue the state machine. If no workflow exists, prompt the user to start a task. If the workflow is paused, suggest `/cc-codex-collaborate resume`.
-- `/cc-codex-collaborate-loop-stop`: disable loop automation by removing only cccc hook registrations from `.claude/settings.json` and updating `config.json` to disable the loop.
-
-Do not enable Stop-hook automation implicitly. The user must explicitly run `/cc-codex-collaborate-loop-start`.
-
-`docs/cccc` is a runtime workspace. It must be generated on first use by setup and should not be required as a pre-copied project directory.
-
-## Subcommand handling
-
-Interpret the first argument after `/cc-codex-collaborate` as a subcommand when it matches one of these values:
-
-- `setup`: run `scripts/cccc-setup.sh`, the interactive configuration wizard. Do not start planning or implementation.
-- `update`: run `scripts/cccc-update.sh`, safe workspace migration after skill upgrade. Sync config/state fields, commands, and enabled hooks. Does NOT start any task, does NOT enable hooks, does NOT run Codex review.
-- `resume`: resume a paused workflow. See "Resume command" section below.
-- `sync-docs`: run `python3 scripts/cccc-sync-docs.py` to detect and sync docs/cccc document changes. Interactive.
-- `diff-docs`: run `python3 scripts/cccc-diff-docs.py` to check for document changes without modifying state.
-- `replan`: run `scripts/cccc-replan.sh` to re-read project and docs, update planning, and run Codex adversarial plan review.
-- `bypass-codex`: run `python3 scripts/cccc-bypass-codex.py` to manage Codex bypass. Subcommands: `status`, `once`, `apply`, `off`.
-- `codex-recheck`: run `scripts/cccc-codex-recheck.sh` to re-check bypassed gates when Codex becomes available.
-- `codex-budget`: run `python3 scripts/cccc-codex-budget.py` to show Codex review budget and policy.
-- `review-now`: run `scripts/cccc-review-now.sh` to force immediate Codex review for current milestone or batch.
-- `checkpoint`: run `scripts/cccc-checkpoint.sh` to manage Codex-approved checkpoints. Subcommands: status, record, commit.
-- `status`: run `scripts/cccc-status.sh` and summarize.
-- `loop-status`: run `scripts/cccc-loop-status.sh` and summarize.
-- `loop-start`: run `scripts/cccc-loop-start.sh` and summarize.
-- `loop-stop`: run `scripts/cccc-loop-stop.sh` and summarize.
-
-If no known subcommand is provided, treat the arguments as the user's coding task. Before doing project discovery or planning, ensure setup has been performed. If `docs/cccc/config.json` is missing, prompt the user to run `/cc-codex-collaborate setup` first.
-
-## Public commands summary
-
-Short aliases: `/cccc` = `/cc-codex-collaborate`, `/cccc-loop-status` = `/cc-codex-collaborate-loop-status`, `/cccc-loop-start` = `/cc-codex-collaborate-loop-start`, `/cccc-loop-stop` = `/cc-codex-collaborate-loop-stop`. Aliases call the same scripts and follow the same state-machine rules. They are convenience wrappers, not separate implementations.
-
-| Command | Purpose |
-| --- | --- |
-| `/cc-codex-collaborate setup` | First-time setup. Interactive configuration wizard. Generates docs/cccc and .claude/commands. Does NOT enable hooks. |
-| `/cc-codex-collaborate update` | Safe migration after skill upgrade. Syncs config/state fields, commands, enabled hooks. Does NOT overwrite user planning/review history. Does NOT enable hooks if not already enabled. |
-| `/cc-codex-collaborate force-update` | Force sync regardless of version number. Same as update but ignores version check. |
-| `/cc-codex-collaborate resume` | Resume a paused workflow. Does NOT bypass Codex gates, safety pauses, or secret requirements. |
-| `/cc-codex-collaborate reset` / `reset state` | Reset state machine runtime state and rehydrate from docs. Does NOT delete planning docs, reviews, or logs. |
-| `/cc-codex-collaborate doctor` | Diagnose installation, config, hooks, Codex, gates, and context. Does NOT modify files. |
-| `/cc-codex-collaborate rebuild-context` | Rebuild context-bundle.md for Codex. Does NOT modify milestone status. |
-| `/cc-codex-collaborate sync-docs` | Detect and sync manual docs/cccc document changes. Interactive. May invalidate planning. |
-| `/cc-codex-collaborate diff-docs` | Check for document changes without modifying state. Read-only. |
-| `/cc-codex-collaborate replan` | Re-read project, update planning, run Codex adversarial plan review. |
-| `/cc-codex-collaborate bypass-codex` | Manage Codex bypass. Subcommands: status, once, apply, off. Generates lower-assurance Claude adversarial review. |
-| `/cc-codex-collaborate codex-recheck` | Re-check bypassed gates when Codex becomes available. Resolves pending rechecks. |
-| `/cc-codex-collaborate codex-budget` | Show Codex review budget, policy, cache, and checkpoint status. Does NOT modify files. |
-| `/cc-codex-collaborate review-now` | Force immediate Codex review for current milestone or pending batch. |
-| `/cc-codex-collaborate checkpoint` | Manage Codex-approved checkpoints. Subcommands: status, record, commit. |
-| `/cc-codex-collaborate gates` | Show plan/milestone/final/safety/docs-sync/review-policy gate status. Shows bypass status. Does NOT modify files. |
-| `/cc-codex-collaborate repair` | Auto-fix safe inconsistencies. Backs up before modifying. Does NOT bypass Codex gates or safety pauses. |
-| `/cc-codex-collaborate trace` | Show recent state machine events. Does NOT modify files. |
-| `/cc-codex-collaborate dev-smoke` | Developer self-test for skill installation. Does NOT modify user files. |
-| `/cc-codex-collaborate codex-check` | Check Codex CLI availability. |
-| `/cc-codex-collaborate "task"` | Start user's free-form task description. Full collaboration loop. |
-| `/cc-codex-collaborate-loop-status` | Show loop/hooks/Codex gates/version status. Includes resume guidance. |
-| `/cc-codex-collaborate-loop-start` | Enable stop-hook auto-continuation. If active workflow exists, immediately continue state machine. |
-| `/cc-codex-collaborate-loop-stop` | Disable stop-hook auto-continuation. |
-
-## Update command
-
-When invoked with `update`, run:
-
-```bash
-.claude/skills/cc-codex-collaborate/scripts/cccc-update.sh
-```
-
-When invoked with `force-update`, run:
-
-```bash
-.claude/skills/cc-codex-collaborate/scripts/cccc-update.sh --force
-```
-
-## Maintenance commands
-
-### reset / reset state
-
-Reset state machine runtime state. Run `cccc-reset.sh`. Uses `cccc-rehydrate-state.py` to infer current milestone from planning docs, reviews, and git history. Does NOT delete planning docs, reviews, or logs. Always creates backup.
-
-### doctor
-
-Diagnose installation, config, hooks, Codex, gates, and context. Run `cccc-doctor.py`. Outputs PASS/WARN/FAIL with fix suggestions. Does NOT modify files.
-
-### rebuild-context
-
-Rebuild context-bundle.md. Run `cccc-build-context.sh`. Does NOT modify milestone status or run Codex.
-
-### gates
-
-Show plan/milestone/final/safety/testing gate status. Run `cccc-gates.py`. Does NOT modify files.
-
-### repair
-
-Auto-fix safe inconsistencies: deprecated state fields, missing hooks, missing commands, recoverable milestone ID, missing context. Run `cccc-repair.sh`. Backs up before modifying. Does NOT bypass Codex gates, safety pauses, NEEDS_SECRET, SENSITIVE_OPERATION, or UNSAFE.
-
-### trace
-
-Show recent state machine events from logs, reviews, and decision log. Run `cccc-trace.py`. Does NOT modify files.
-
-### dev-smoke
-
-Developer self-test: JSON validation, shell syntax, Python compile, core file existence, script executability. Run `cccc-dev-smoke.sh`. Does NOT modify user files.
-
-### codex-check
-
-Check Codex CLI availability. Run `cccc-codex-check.sh`.
-
-## Resume command
-
-When invoked with `resume`, Claude Code must recover a paused workflow without bypassing safety rules.
-
-### Resume flow
-
-1. Read `docs/cccc/config.json` and `docs/cccc/state.json`.
-2. Explain why the workflow is paused (status + pause_reason).
-3. If the status allows automatic resume (e.g. `READY_TO_CONTINUE`), call `cccc-resume.sh` and continue the state machine.
-4. If the status requires user confirmation or answers, use the user's primary language with brainstorm-style options.
-5. After user confirms:
-   - Write to `docs/cccc/decision-log.md`
-   - Update `docs/cccc/open-questions.md` if applicable
-   - Update `docs/cccc/state.json`:
-     - `previous_status` = old status
-     - `status` = `READY_TO_CONTINUE`
-     - `resume_reason` = reason for resuming
-     - `resume_strategy` = selected strategy
-     - `last_resumed_at` = UTC timestamp
-     - `stop_hook_continuations` = 0
-     - `pause_reason` = null
-   - Do NOT mark any milestone as passed.
-   - Do NOT mark the task as DONE.
-   - Do NOT mark any Codex gate as pass.
-6. If `config.mode = full-auto-safe` and `automation.stop_hook_loop_enabled = true`:
-   - Resume must immediately continue executing the state machine.
-   - Do not just output "resumed" and stop.
-7. If `mode != full-auto-safe`:
-   - After resume, output next-step suggestions. Do not force auto-continue.
-
-### Safe resume rules by status
-
-**PAUSED_FOR_HUMAN / NEEDS_HUMAN:**
-- If `pause_reason` or `open-questions.md` has unanswered questions, ask the user first.
-- Brainstorm-style options: A. recommended approach, B. conservative approach, C. skip milestone, D. continue with risk recorded, E. free input.
-- After answer: write decision-log, update open-questions, set status to `READY_TO_CONTINUE`.
-- Do NOT mark milestone as passed. Must re-enter the appropriate gate (e.g. Codex review).
-
-**PAUSED_FOR_CODEX:**
-- Run `cccc-codex-check.sh` first.
-- If Codex is still unavailable: remain `PAUSED_FOR_CODEX`, output reason.
-- If Codex is available: clear `codex_unavailable_reason`, set status to `READY_TO_CONTINUE`.
-- Must re-run the missing Codex gate (plan/milestone/final review). Resume does NOT skip Codex.
-
-**PAUSED_FOR_SYSTEM:**
-- Remind user that a system/API error caused the pause.
-- Options: A. checked logs, continue, B. view StopFailure logs, C. exit, D. free input.
-- User must explicitly confirm. If no confirmation, do not continue.
-- On continue: record in decision-log, reset `stop_hook_continuations = 0`, set `READY_TO_CONTINUE`.
-
-**NEEDS_SECRET:**
-- Default: cannot resume.
-- Remind user: do NOT send real secrets, API keys, wallet private keys, or seed phrases to Claude.
-- Options: A. configured locally, continue, B. use mock/dummy/test fixture, C. skip milestone, D. exit.
-- If A or B: record decision-log (NO secret values), set `READY_TO_CONTINUE`.
-- If C: mark milestone as blocked/skipped, record risk.
-
-**SENSITIVE_OPERATION / UNSAFE:**
-- Default: do not auto-resume.
-- Options: A. remain paused, B. switch to safe alternative, C. confirm safe local test, D. skip milestone, E. free input.
-- Prohibited resume: real money, mainnet transactions, real wallet keys, production deployments, destructive irreversible operations.
-- Unless user provides a safe alternative, remain paused.
-
-**FAIL_UNCLEAR / REVIEW_THRESHOLD_EXCEEDED:**
-- Options: A. pause for manual intervention, B. extend review budget +1 round, C. record risk and proceed, D. skip milestone, E. free input.
-- If B: increase review budget, record decision-log, set `READY_TO_CONTINUE`.
-- If C or D: must record known risk. Cannot skip P0/P1 security issues.
-
-### Non-interactive resume
-
-The resume script supports non-interactive arguments:
-- `--confirm`: confirm the resume action
-- `--strategy recommended`: use recommended approach
-- `--strategy mock`: use mock/dummy secrets
-- `--strategy skip`: skip current milestone
-- `--strategy extend-review`: extend review budget +1
-
-### Resume script
-
-Run:
-```bash
-.claude/skills/cc-codex-collaborate/scripts/cccc-resume.sh [--confirm] [--strategy <strategy>]
-```
-
-The script only updates state and outputs guidance. It does NOT execute Codex review or implement code. The actual continuation is driven by the SKILL.md state machine.
-
-## Role separation
-
-- Claude Code: project discovery, language detection, planning, self-review, implementation, tests, fixes, state management, human-facing communication.
-- Codex: independent read-only reviewer, adversarial planning challenger, milestone reviewer, next-milestone critic, final reviewer.
-- Human: ambiguous requirements, product decisions, security decisions, secrets, production operations, real money, irreversible actions.
-
-Codex must not directly modify files. Codex reviews using context and returns structured JSON.
-
-## Mandatory Codex Gates
-
-**This is a P0 invariant. Codex review is NEVER optional.**
-
-Rules:
-
-1. Claude Code MUST NOT begin implementation until Codex adversarial plan review has passed (or been bypassed with Claude adversarial review).
-2. Claude Code MUST NOT mark a milestone as passed until Codex milestone review has passed (or been bypassed with Claude adversarial review).
-3. Claude Code MUST NOT mark the whole task as completed until Codex final review has passed (or been bypassed with Claude adversarial review).
-4. If Codex is unavailable, misconfigured, fails to run, or returns invalid JSON, Claude Code MUST check `config.codex.unavailable_policy` and follow the configured strategy.
-5. Claude Code MUST NOT silently skip Codex review, even for trivial tasks.
-6. For trivial tasks, Claude may use a lightweight plan and milestone, but Codex review is still required.
-7. Self-checks such as cat, tests, lint, or build are NOT a substitute for Codex review.
-8. A milestone can only be marked passed if there is a valid Codex review artifact with `status = pass` or a Claude adversarial bypass review artifact with `status = pass` for that milestone and review round.
-9. If no Codex review artifact or approved bypass review exists, the only valid next action is to run Codex review, run bypass review, or pause.
-10. Any final summary must mention the Codex review file or bypass review file used to approve the milestone.
-11. Bypass review results are marked as `lower_assurance`. They do NOT count as Codex pass.
-12. Critical-risk scenarios MUST NOT be bypassed.
-
-**Invariants (memorize these):**
-
-```text
-No Codex plan review, no implementation.
-No Codex milestone review, no milestone pass.
-No Codex final review, no task completion.
-Codex unavailable means pause, not skip.
-```
-
-**Before implementation:**
-
-- Run `.claude/skills/cc-codex-collaborate/scripts/cccc-codex-check.sh` to verify Codex availability.
-- Run `.claude/skills/cc-codex-collaborate/scripts/cccc-assert-codex-gates.py assert-plan-approved` to verify plan approval.
-- If assertion fails, you MUST pause with `status = PAUSED_FOR_CODEX`.
-
-**Before marking milestone passed:**
-
-- Run `cccc-assert-codex-gates.py assert-milestone-approved`.
-- If assertion fails, run `cccc-codex-milestone-review.sh` and wait for result.
-- If review fails, fix and re-review. Do NOT skip.
-
-**Before marking task DONE:**
-
-- Run `cccc-assert-codex-gates.py assert-final-approved`.
-- If assertion fails, run `cccc-codex-final-review.sh`.
-- Only proceed to DONE if final review passes.
-
-## User language rule
-
-Before planning or asking any question, detect the user's primary language.
-
-Detection priority:
-
-1. `config.json` `language.user_language` if not `"auto"`.
-2. Explicit user preference.
-3. Latest user instruction language.
-4. Main task language if the message is mixed.
-5. If still unclear, default to the language of the most recent user message.
-
-Store it in `docs/cccc/config.json` as `language.user_language`.
-
-All human-facing output must use `user_language`. Codex may reason in English, but Claude Code must summarize and ask questions in the user's language.
-
-## State machine
-
-```text
-SETUP_OR_BOOTSTRAP
-  ↓
-INIT
-  ↓
-DETECT_USER_LANGUAGE
-  ↓
-DISCOVER_EXISTING_PROJECT
-  ↓
-BUILD_PROJECT_CONTEXT
-  ↓
-CLAUDE_PLANNING_REVIEW
-  ├─ READ_MORE_PROJECT → DISCOVER_EXISTING_PROJECT
-  ├─ ASK_HUMAN → PAUSE_FOR_HUMAN
-  └─ OK
-      ↓
-CODEX_ADVERSARIAL_PLAN_REVIEW
-  ├─ INSUFFICIENT_CONTEXT → DISCOVER_EXISTING_PROJECT
-  ├─ REJECTED_FIXABLE → CLAUDE_REVISE_PLAN
-  ├─ NEEDS_HUMAN → PAUSE_FOR_HUMAN
-  ├─ UNSAFE → PAUSE_FOR_HUMAN
-  └─ APPROVED
-      ↓
-IMPLEMENT_MILESTONE
-      ↓
-CLAUDE_SELF_REVIEW
-      ↓
-CODEX_MILESTONE_REVIEW
-  ├─ PASS → RECORD_ACCEPTANCE → PLAN_NEXT_MILESTONE
-  ├─ FAIL_FIXABLE → CLAUDE_FIX → CLAUDE_SELF_REVIEW
-  ├─ FAIL_UNCLEAR → PAUSE_FOR_HUMAN
-  ├─ NEEDS_HUMAN → PAUSE_FOR_HUMAN
-  ├─ SENSITIVE_OPERATION → PAUSE_FOR_HUMAN
-  └─ MAX_REVIEW_EXCEEDED → THRESHOLD_POLICY
-
-PAUSED_FOR_HUMAN / NEEDS_HUMAN / PAUSED_FOR_SYSTEM
-PAUSED_FOR_CODEX / NEEDS_SECRET / SENSITIVE_OPERATION
-UNSAFE / FAIL_UNCLEAR / REVIEW_THRESHOLD_EXCEEDED
-  ↓ (resume with /cc-codex-collaborate resume)
-READY_TO_CONTINUE
-  ↓ (re-enter appropriate gate)
-  └─→ CODEX_ADVERSARIAL_PLAN_REVIEW / CODEX_MILESTONE_REVIEW / IMPLEMENT_MILESTONE
-```
-
-No implementation may start until project discovery is complete and the initial roadmap has passed Claude self-review plus Codex adversarial plan review, unless the human explicitly chooses to override after a pause.
-
-## Thresholds
-
-Thresholds are stored in `docs/cccc/config.json`. Read them from there, not from state.json.
-
-Default thresholds (recommended preset):
-
-```json
-{
-  "planning": {
-    "max_plan_review_rounds": 3
-  },
-  "milestones": {
-    "max_milestones_per_run": 5,
-    "max_diff_lines_per_milestone": 1200,
-    "max_changed_files_per_milestone": 20
-  },
-  "review": {
-    "max_review_rounds_per_milestone": 3,
-    "max_fix_attempts_per_milestone": 3,
-    "block_on_p0": true,
-    "block_on_p1": true,
-    "allow_continue_with_p2": true
-  },
-  "automation": {
-    "stop_hook_loop_enabled": false,
-    "max_stop_hook_continuations": 10
-  }
-}
-```
-
-Supported modes:
-
-- `manual`: pause after each major phase.
-- `supervised-auto`: default. Planning is strictly reviewed; implementation can loop automatically until risk or threshold.
-- `full-auto-safe`: optional Stop hook can continue safe unfinished work, but never bypass hard pause conditions.
-
-## Hard pause conditions
-
-Immediately pause and ask the human if any of these occur:
-
-1. Real wallet private keys, seed phrases, keystores, signing keys, or production API keys are needed.
-2. Real production API keys, database passwords, OAuth secrets, SSH private keys, cookies, tokens, or sessions are needed.
-3. Real money movement, blockchain transactions, withdrawals, purchases, deployments, or irreversible external actions are needed.
-4. Production database, production infrastructure, DNS, IAM, billing, or permission changes are required.
-5. Destructive operations are required, including force push, history rewrite, mass delete, dropping databases, or removing important directories.
-6. Codex returns `needs_human: true`.
-7. Codex cannot determine a safe next step.
-8. Requirements are ambiguous and continuing would create product, security, financial, architecture, or data-loss risk.
-9. The same milestone exceeds `max_review_rounds_per_milestone` from config.
-10. Claude Code and Codex disagree on whether the result is safe.
-11. Real user data or credentials would be exposed to a model, log, test, or third-party service.
-12. Project context is missing or stale and cannot be reconstructed by reading the repository.
-
-Never ask the user to paste real secrets into chat. Ask them to configure secrets locally in a sandboxed environment.
-
-## Brainstorming and human-question gate
-
-When clarification is needed, use a Superpowers-inspired brainstorming interaction.
-
-Do not ask vague open-ended questions by default. Instead, present:
-
-1. why the question matters
-2. 2 to 5 concrete choices
-3. a recommended safe default when possible
-4. an `Other` option where the user can type their own answer
-5. consequences or tradeoffs when relevant
-
-Example format in Chinese:
-
-```text
-在规划数据库 milestone 前，需要确认持久化策略。
-
-请选择：
-A. 使用现有数据库层，暂时不改 schema。推荐。
-B. 新增 migration，但只针对本地 / 开发环境。
-C. 第一个 milestone 先用内存 adapter，暂缓持久化。
-D. Other：输入你的偏好方案。
-```
-
-Example format in English:
-
-```text
-I need to clarify the persistence strategy before planning database milestones.
-
-Choose one:
-A. Use the existing database layer and avoid schema changes for now. Recommended.
-B. Add a new migration, but only for local/dev databases.
-C. Defer persistence and use an in-memory adapter for the first milestone.
-D. Other: describe your preferred approach.
-```
-
-Record human answers in:
-
-- `docs/cccc/decision-log.md`
-- `docs/cccc/open-questions.md`
-
-## Project discovery
-
-Projects are often not greenfield. Before planning, inspect and summarize the existing project.
-
-Read relevant files and directories such as:
-
-- README and docs
-- CLAUDE.md, AGENTS.md, CONTRIBUTING.md
-- package.json, pyproject.toml, Cargo.toml, go.mod, pom.xml, build.gradle, Makefile
-- src, app, lib, packages, services
-- tests, test, spec, __tests__
-- CI configs
-- Dockerfile, compose files, infra files
-- .env.example, config examples
-- migrations, schema, Prisma, DB files
-- existing TODOs, ADRs, issue templates if present
-- git status and a short git log summary
-
-Do not write business code during discovery.
-
-Create or update:
-
-- `docs/cccc/project-map.md`
-- `docs/cccc/current-state.md`
-- `docs/cccc/architecture.md`
-- `docs/cccc/test-strategy.md`
-- `docs/cccc/risk-register.md`
-- `docs/cccc/open-questions.md`
-
-## Project planning
-
-After discovery, create:
-
-- `docs/cccc/project-brief.md`
-- `docs/cccc/roadmap.md`
-- `docs/cccc/milestone-backlog.md`
-
-Each milestone must include:
-
-- id
-- title
-- goal
-- scope
-- out of scope
-- acceptance criteria
-- expected changed files or modules
-- required tests
-- risk level
-- dependencies
-- stop conditions
-
-## Claude planning self-review
-
-Before asking Codex to review a plan, Claude Code must challenge its own plan.
-
-Ask:
-
-- Did I infer something that should be verified from the repository?
-- Did I misunderstand the user's goal?
-- Did I miss existing architecture constraints?
-- Are milestones too large?
-- Are acceptance criteria testable?
-- Are there hidden secret, wallet, API key, production, or real-money risks?
-- Are there multiple plausible approaches requiring a human choice?
-- Would continuing without asking cause product, security, architecture, financial, or data-loss risk?
-
-If the answer indicates risk or missing context, read more project files or ask the human with options.
-
-## Codex adversarial plan review
-
-Codex must review the initial plan adversarially before implementation begins.
-
-Codex should try to reject the plan by finding:
-
-- misunderstood requirements
-- missing project context
-- unsafe assumptions
-- milestones that are too large
-- untestable acceptance criteria
-- architecture conflicts
-- security gaps
-- secret-handling risks
-- production, wallet, API key, or real-money risks
-- missing human decisions
-
-Only approve if the roadmap is clear, safe, scoped, testable, and aligned with the discovered project.
-
-## Context bundle rule
-
-Before every Codex call, regenerate:
-
-```text
-docs/cccc/context-bundle.md
-```
-
-The context bundle must include:
-
-1. user language (from config.json)
-2. original user task
-3. current state
-4. project map
-5. architecture summary
-6. test strategy
-7. roadmap
-8. milestone backlog status
-9. completed milestones
-10. current milestone
-11. acceptance criteria
-12. decision log summary
-13. open questions
-14. risk register
-15. git status
-16. diff summary
-17. relevant diff
-18. test output
-19. last review result
-20. current config thresholds
-
-Hard rule:
-
-```text
-No context bundle, no Codex planning.
-No project discovery, no roadmap.
-No approved roadmap, no implementation.
-No config.json, run setup first.
-```
-
-## Milestone implementation loop
-
-For each milestone:
-
-1. Confirm roadmap is approved.
-2. Confirm current milestone is clearly scoped.
-3. Read thresholds from `docs/cccc/config.json`.
-4. Implement the smallest coherent change.
-5. Run relevant tests and checks.
-6. Perform Claude self-review.
-7. Regenerate `docs/cccc/context-bundle.md`.
-8. Run Codex milestone review in read-only mode.
-9. If Codex passes, record acceptance and select next milestone.
-10. If Codex fails with fixable findings, fix and repeat.
-11. If Codex needs human input or detects unsafe work, pause.
-
-## Codex next milestone rule
-
-Codex may suggest the next milestone only from the existing roadmap and milestone backlog. Codex must not expand scope.
-
-Claude Code must validate that the proposed next milestone:
-
-- matches the user's original task
-- follows the roadmap
-- does not expand scope
-- does not require secrets or sensitive operations
-- has clear acceptance criteria
-- can be tested locally
-
-## Stop hook automation rule
-
-The optional Stop hook (`cccc-stop.sh`) reads configuration from `docs/cccc/config.json` and runtime state from `docs/cccc/state.json`.
-
-It may block the stop (returning `decision: "block"`) only when all of these conditions are met:
-
-- `docs/cccc/config.json` exists and `automation.stop_hook_loop_enabled` is `true`
-- `docs/cccc/config.json` `mode` is `full-auto-safe`
-- `docs/cccc/state.json` exists
-- `status` is not a terminal or paused state (DONE, COMPLETED, FAILED, PAUSED_FOR_HUMAN, NEEDS_HUMAN, NEEDS_SECRET, SENSITIVE_OPERATION, UNSAFE, PAUSED_FOR_SYSTEM, PAUSED_FOR_CODEX)
-- `pause_reason` is empty
-- `stop_hook_active` in the hook input is not `true` (prevents infinite recursion)
-- continuation count is below `automation.max_stop_hook_continuations` (from config.json)
-- `status` is not `SETUP_COMPLETE` with no milestone and no backlog (prevents empty-spin)
-
-The stop hook allows `READY_TO_CONTINUE` status to proceed — this is the status set after a successful resume.
-
-When the hook blocks, it outputs a `reason` that instructs Claude to continue the state machine loop internally — not just take one small step and stop again. The skill's internal state machine must drive the actual loop; the hook merely prevents Claude Code from stopping prematurely.
-
-The Stop hook must never continue past hard pause conditions.
-
-## User-facing progress format
-
-Use the user's language (from `config.json` `language.user_language`).
-
-Chinese:
-
-```text
-Milestone M001：<标题>
-状态：实现中 / Review 中 / 修复中 / 已通过 / 已暂停
-Review 轮次：1/3
-最近检查：<测试结果或跳过原因>
-决策：<下一步动作>
-```
-
-English:
-
-```text
-Milestone M001: <title>
-Status: implementing / reviewing / fixing / passed / paused
-Review round: 1/3
-Last check: <test result or reason skipped>
-Decision: <next action>
-```
-
-## Manual Documentation Sync
-
-docs/cccc documents are user-editable. Users may manually modify architecture, roadmap, milestones, risk register, or other planning documents.
-
-Rules:
-
-1. docs/cccc documents are user-editable. Claude Code must not assume state.json is authoritative if docs/cccc documents changed.
-2. Before continuing implementation, check docs sync status.
-3. High-impact changes to architecture, stack, roadmap, milestone backlog, risk policy, or project brief may invalidate previous planning approval.
-4. If planning is invalidated, no implementation is allowed until replan and Codex adversarial plan review pass.
-5. sync-docs must ask the user how to apply changes using options plus free input.
-6. Never silently ignore architecture or stack changes.
-7. Never continue old milestones if docs say architecture or roadmap changed.
-8. doc-index.json tracks file hashes for change detection. It is updated by sync-docs, not manually.
-
-### sync-docs command
-
-Run:
-```bash
-python3 .claude/skills/cc-codex-collaborate/scripts/cccc-sync-docs.py [--strategy=<strategy>]
-```
-
-If changes are detected and no `--strategy` is provided, output `SYNC_AWAITING_DECISION=true` and ask the user with brainstorm-style options:
-
-- A. Adopt docs as new source of truth, invalidate old plan, replan (Recommended for high/critical impact)
-- B. Only update context-bundle (safe for low impact)
-- C. Pause workflow
-- D. Ignore changes, only update doc-index
-- E. View detailed diff
-- F. Custom input
-
-Strategies: `adopt_and_replan`, `context_only`, `pause`, `ignore`, `view_diff`.
-
-### diff-docs command
-
-Read-only. Run:
-```bash
-python3 .claude/skills/cc-codex-collaborate/scripts/cccc-diff-docs.py
-```
-
-### replan command
-
-Run:
-```bash
-.claude/skills/cc-codex-collaborate/scripts/cccc-replan.sh
-```
-
-Replan must:
-1. Re-read the project and docs/cccc documents.
-2. Update roadmap.md, milestone-backlog.md, current-state.md.
-3. Perform Claude planning self-review.
-4. Run Codex adversarial plan review.
-5. If Codex plan review passes: `roadmap_status = codex_approved`, `planning_invalidated_by_doc_change = false`, `status = READY_TO_CONTINUE`.
-6. If Codex rejects or needs_human: set appropriate pause status. No implementation.
-
-Replan should NOT auto-implement code unless: mode = full-auto-safe, loop enabled, Codex plan review pass, no pause_reason, and user explicitly allows.
-
-## Codex Bypass Mode
-
-When Codex is unavailable (quota exhausted, CLI not installed, auth failure, API error), the skill can bypass Codex review with Claude Code acting as an adversarial reviewer.
-
-### Config
-
-`config.codex.unavailable_policy` controls behavior:
-- `strict_pause`: Always pause, never bypass. Safest.
-- `ask_or_bypass_once`: Ask user, allow one-time bypass per gate. Recommended.
-- `auto_bypass_low_medium`: Automatically bypass for low/medium risk. High/critical still pause.
-- `always_ask`: Always ask user when Codex unavailable.
-- `custom`: User-defined policy.
-
-`config.codex.bypass` controls bypass details:
-- `enabled`: Whether bypass is allowed.
-- `mode`: `once_per_gate` or `auto_low_medium`.
-- `require_human_confirmation`: Whether user must confirm bypass.
-- `max_consecutive_bypassed_gates`: Max bypasses before forcing Codex.
-- `allow_for_high_risk` / `allow_for_critical_risk`: Risk level gating.
-- `require_later_codex_recheck`: Whether Codex must recheck later.
-
-### bypass-codex command
-
-Run:
-```bash
-python3 .claude/skills/cc-codex-collaborate/scripts/cccc-bypass-codex.py [status|once|apply|off]
-```
-
-- `status`: Show bypass config and state.
-- `once`: Request one-time bypass for current gate. May require user confirmation.
-- `apply --gate=<gate> --reason=<reason>`: Apply bypass after Claude adversarial review. Creates artifact in `docs/cccc/reviews/bypass/`.
-- `off`: Disable bypass, set `strict_pause`.
-
-### Claude adversarial bypass review
-
-When bypass is used, Claude Code must act as an adversarial reviewer following `prompts/claude-adversarial-bypass-review.md`:
-1. Assume the implementation is wrong until proven otherwise.
-2. Check acceptance criteria, tests, architecture consistency.
-3. Check security, secrets, production, wallet risks.
-4. For high/critical risk, prefer `needs_human` or `unsafe`.
-5. Mark output as `lower_assurance`.
-6. Require later Codex recheck.
-
-### Bypass review artifacts
-
-Stored in `docs/cccc/reviews/bypass/<gate>-claude-bypass-review-<timestamp>.json`.
-
-Gate status values:
-- `pass`: Codex reviewed and approved.
-- `bypassed`: Claude adversarial bypass review approved (lower assurance).
-- `not_run`, `fail`, `needs_human`: No valid review.
-
-`bypassed` is NOT the same as `pass`. It indicates lower assurance.
-
-### codex-recheck command
-
-When Codex becomes available, re-check all bypassed gates:
-```bash
-.claude/skills/cc-codex-collaborate/scripts/cccc-codex-recheck.sh
-```
-
-If Codex passes: remove from `pending_codex_recheck`, update gate status to `pass`.
-If Codex fails: pause with `PAUSED_FOR_CODEX_RECHECK_FAILURE`.
-
-### Prohibited bypass scenarios
-
-Bypass is NEVER allowed for:
-- Real wallet private keys, seed phrases, keystores
-- Real money / mainnet transactions
-- Production deployments
-- Destructive operations
-- Critical risk scenarios
-
-## Codex Review Budget and Frequency
-
-Codex review frequency is controlled by `config.codex_review_policy`.
-
-Rules:
-
-1. Do not call Codex for obvious local failures before Claude fixes them.
-2. Use the smallest sufficient review level (self-check, adversarial, targeted, full context).
-3. Use targeted or diff-only context when full context is unnecessary.
-4. Use batched Codex review for low-risk milestones when policy allows.
-5. Use Claude adversarial review between Codex reviews when policy allows.
-6. Mark Claude-only reviews as lower assurance.
-7. High-risk and critical-risk changes must not silently bypass Codex.
-8. Use review fingerprint cache to avoid repeated Codex calls on identical diffs.
-9. Prefer reviewing diff since last Codex-approved checkpoint.
-
-### Review levels
-
-| Level | Codex? | Description |
+| Document | Content | When to load |
 | --- | --- | --- |
-| `claude_self_check` | No | Claude self-check only |
-| `claude_adversarial` | No | Claude adversarial review (lower assurance) |
-| `codex_targeted` | Yes | Codex reviews targeted diff + tests |
-| `codex_full_context` | Yes | Codex reviews full context bundle |
+| `docs/workflow.md` | State machine, milestone loop, project discovery, planning, self-review, progress format | Starting a task or continuing state machine |
+| `docs/setup.md` | Setup wizard flow, configuration presets, bootstrap model, update command | `setup`, `update`, `force-update` subcommands |
+| `docs/safety-policy.md` | Hard pause conditions, role separation, brainstorming interaction | Any safety-sensitive decision or human question |
+| `docs/codex-review.md` | Mandatory Codex gates, adversarial plan review, context bundle rule | Before/after any Codex review gate |
+| `docs/codex-bypass.md` | Codex bypass mode, Claude adversarial bypass review, recheck | Codex unavailable or bypass-codex/codex-recheck commands |
+| `docs/codex-budget.md` | Review budget/frequency, fingerprint cache, checkpoint, review-policy | Review scheduling or budget/cache/checkpoint commands |
+| `docs/docs-sync.md` | Manual documentation sync, sync-docs, diff-docs, replan | sync-docs, diff-docs, replan commands |
+| `docs/testing-policy.md` | Thresholds, quality gates, language detection, modes | Any threshold or quality gate check |
+| `docs/maintenance.md` | Reset, doctor, rebuild-context, gates, repair, trace, dev-smoke, codex-check, resume | Any maintenance subcommand |
+| `docs/hooks.md` | Stop hook automation rule, loop control commands | loop-start, loop-stop, or stop hook behavior |
+| `docs/state-and-config.md` | config.json vs state.json separation, runtime workspace layout | Reading/writing config or state |
+| `docs/commands.md` | Subcommand handling, public commands summary, aliases | Command routing or alias lookup |
 
-### Review frequency by risk
+All doc files are located under `.claude/skills/cc-codex-collaborate/docs/`.
 
-| Risk | Default frequency |
-| --- | --- |
-| Low | Every 3 milestones (Balanced), every 5 (Budget) |
-| Medium | Every 2 milestones |
-| High | Every milestone |
-| Critical | Every milestone |
-| Plan review | Always Codex |
-| Final review | Always Codex |
+## Command routing
 
-### codex-budget command
+Parse the first argument to determine the action:
 
-```bash
-python3 .claude/skills/cc-codex-collaborate/scripts/cccc-codex-budget.py
-```
+- **`setup`** → Load `docs/setup.md`. Run setup wizard. Do NOT start any task.
+- **`update`** → Load `docs/setup.md`. Run `scripts/cccc-update.sh`. Safe migration.
+- **`force-update`** → Load `docs/setup.md`. Run `scripts/cccc-update.sh --force`.
+- **`resume`** → Load `docs/maintenance.md` and `docs/codex-review.md`. Resume paused workflow.
+- **`reset`** / **`reset state`** → Load `docs/maintenance.md`. Reset state machine.
+- **`doctor`** → Load `docs/maintenance.md`. Run diagnostics.
+- **`rebuild-context`** → Load `docs/maintenance.md`. Rebuild context-bundle.
+- **`gates`** → Load `docs/maintenance.md`. Show gate status.
+- **`repair`** → Load `docs/maintenance.md`. Auto-fix inconsistencies.
+- **`trace`** → Load `docs/maintenance.md`. Show event timeline.
+- **`dev-smoke`** → Load `docs/maintenance.md`. Developer self-test.
+- **`codex-check`** → Load `docs/maintenance.md`. Check Codex CLI.
+- **`sync-docs`** → Load `docs/docs-sync.md`. Detect and sync doc changes.
+- **`diff-docs`** → Load `docs/docs-sync.md`. Read-only doc change check.
+- **`replan`** → Load `docs/docs-sync.md` and `docs/codex-review.md`. Re-plan project.
+- **`bypass-codex`** → Load `docs/codex-bypass.md`. Manage Codex bypass.
+- **`codex-recheck`** → Load `docs/codex-bypass.md`. Re-check bypassed gates.
+- **`codex-budget`** → Load `docs/codex-budget.md`. Show review budget.
+- **`review-now`** → Load `docs/codex-budget.md`. Force immediate Codex review.
+- **`checkpoint`** → Load `docs/codex-budget.md`. Manage checkpoints.
+- **`status`** → Run `scripts/cccc-status.sh` and summarize.
+- **`loop-status`** → Load `docs/hooks.md`. Run `scripts/cccc-loop-status.sh` and summarize.
+- **`loop-start`** → Load `docs/hooks.md`. Run `scripts/cccc-loop-start.sh`. **MUST act on CCCC_WORKFLOW_ACTION marker immediately.**
+- **`loop-stop`** → Load `docs/hooks.md`. Run `scripts/cccc-loop-stop.sh` and summarize.
+- **Any other text** → Treat as the user's coding task. Start the full collaboration loop.
 
-Shows: policy mode, calls this run, pending batch, checkpoint status, recommendations.
+### loop-start behavior — CRITICAL
 
-### review-now command
+After running cccc-loop-start.sh, check the CCCC_WORKFLOW_ACTION marker in the output:
 
-```bash
-.claude/skills/cc-codex-collaborate/scripts/cccc-review-now.sh [current|batch|full]
-```
+- **`continue_now`** — **Do NOT summarize and stop.** You MUST immediately read `docs/cccc/config.json` and `docs/cccc/state.json`, determine the current milestone and status, and execute the next state-machine step right now in this same turn.
+- **`needs_resume`** — The workflow is paused. Execute `/cccc resume` or tell the user to run it.
+- **`needs_task`** — No active workflow. Tell the user to run `/cccc "task description"`.
+- **`needs_replan`** — Planning invalidated by doc changes. Tell the user to run `/cccc replan`.
+- **`needs_sync_docs`** — Documents changed since last sync. Tell the user to run `/cccc sync-docs`.
+- **`done`** — The workflow is already completed. Tell the user to start a new task.
 
-Forces immediate Codex review. Does not bypass safety limits.
+**For `continue_now`: You are NOT done after running the loop-start script. The script output tells you to continue. Continuing means executing state machine steps NOW, not waiting for the stop hook.**
 
-### checkpoint command
+## Before starting a task
 
-```bash
-.claude/skills/cc-codex-collaborate/scripts/cccc-checkpoint.sh [status|record|commit]
-```
+If `docs/cccc/config.json` is missing, prompt the user to run `/cccc setup` first. Do not proceed without a valid config.
 
-- `status`: Show checkpoint status and diff since last approved commit.
-- `record`: Record current HEAD as Codex-approved checkpoint (no git commit).
-- `commit`: Create a git checkpoint commit after user confirmation.
+## Default task execution algorithm
 
-### review-policy decision script
+When the user provides a task description (not a known subcommand), follow this sequence:
 
-Before each review, run:
-```bash
-python3 .claude/skills/cc-codex-collaborate/scripts/cccc-review-policy.py --gate=<gate>
-```
+1. **Detect language** — Identify user's primary language. Store in `config.json`.
+2. **Ensure setup** — If `docs/cccc/config.json` missing, prompt setup.
+3. **Discover project** — Inspect codebase, create/update project docs. (See `docs/workflow.md`)
+4. **Build context** — Generate `docs/cccc/context-bundle.md`. (See `docs/codex-review.md`)
+5. **Plan** — Create roadmap, milestone backlog. (See `docs/workflow.md`)
+6. **Self-review** — Claude Code challenges its own plan. (See `docs/workflow.md`)
+7. **Codex plan review** — Adversarial review by Codex. Must pass. (See `docs/codex-review.md`)
+8. **Implement milestones** — One at a time, smallest coherent change. (See `docs/workflow.md`)
+9. **Review each milestone** — Claude self-review → Codex milestone review. Must pass. (See `docs/codex-review.md`)
+10. **Fix and iterate** — Fix findings → re-review → next milestone. (See `docs/workflow.md`)
+11. **Final review** — Codex final review before marking DONE. Must pass. (See `docs/codex-review.md`)
+12. **Record completion** — Update state, write summary in user's language.
 
-Returns decision: `run_codex_full_context`, `run_codex_targeted`, `skip_codex_use_claude_adversarial`, `batch_pending`, `cache_hit`, `budget_exhausted`.
+At any point, if a hard pause condition triggers (see `docs/safety-policy.md`), pause immediately and ask the human.
+
+## Explicit non-goals
+
+This skill does NOT:
+
+- Download or install Codex CLI
+- Provide a substitute for human judgment on security, financial, or production decisions
+- Auto-enable hooks without explicit user action
+- Modify files outside of `docs/cccc/` and `.claude/commands/`/`.claude/hooks/` (except when implementing the user's actual coding task)
+- Store real secrets, API keys, wallet keys, or credentials in any file
+- Continue past pause conditions without human confirmation

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.18 - 2026-05-15
+
+### Changed
+
+- SKILL.md refactored from ~1010 lines to ~170 lines. Content split into 12 focused doc files under `skills/cc-codex-collaborate/docs/`:
+  - `workflow.md` — State machine, milestone loop, project discovery, planning, self-review, progress format
+  - `setup.md` — Setup wizard flow, configuration presets, bootstrap model, update command
+  - `safety-policy.md` — Hard pause conditions, role separation, brainstorming interaction
+  - `codex-review.md` — Mandatory Codex gates, adversarial plan review, context bundle rule
+  - `codex-bypass.md` — Codex bypass mode, Claude adversarial bypass review, recheck
+  - `codex-budget.md` — Review budget/frequency, fingerprint cache, checkpoint, review-policy
+  - `docs-sync.md` — Manual documentation sync, sync-docs, diff-docs, replan
+  - `testing-policy.md` — Thresholds, quality gates, language detection, modes
+  - `maintenance.md` — Reset, doctor, rebuild-context, gates, repair, trace, dev-smoke, codex-check, resume
+  - `hooks.md` — Stop hook automation rule, loop control commands
+  - `state-and-config.md` — config.json vs state.json separation, runtime workspace layout
+  - `commands.md` — Subcommand handling, public commands summary, aliases
+- SKILL.md now includes a documentation loading map table and command routing section instead of inline behavior rules.
+- No behavior changes. All rules preserved in doc files.
+
 ## 0.1.17 - 2026-05-15
 
 ### Added
