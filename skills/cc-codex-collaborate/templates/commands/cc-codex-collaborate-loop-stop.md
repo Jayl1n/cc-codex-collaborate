@@ -1,6 +1,6 @@
 <!-- generated-by: cc-codex-collaborate -->
 <!-- generated-file: true -->
-<!-- template-version: 0.1.10 -->
+<!-- template-version: 0.1.11 -->
 
 ---
 description: Disable cc-codex-collaborate stop-hook automation.

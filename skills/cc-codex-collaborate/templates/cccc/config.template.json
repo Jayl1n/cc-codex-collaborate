@@ -1,11 +1,11 @@
 {
   "skill": {
     "name": "cc-codex-collaborate",
-    "installed_version": "0.1.10",
+    "installed_version": "0.1.11",
     "workspace_schema_version": 1,
     "last_updated_at": null
   },
-  "version": "0.1.10",
+  "version": "0.1.11",
   "language": {
     "user_language": "auto",
     "auto_detect": true

@@ -173,3 +173,9 @@
 
 - Initial Claude Code + Codex collaboration skill.
 - Project discovery, planning, Claude self-review, Codex adversarial plan review, milestone loop, safety gates, language detection, and brainstorming-style human questions.
+
+## 0.1.11 - 2026-05-15
+
+### Changed
+
+- Command templates now use CRITICAL-level emphasis to prevent Claude Code from summarizing and stopping after loop-start when `continue_now` is detected. Claude Code must immediately execute state machine steps instead of waiting for the stop hook.
