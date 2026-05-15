@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.10 - 2026-05-15
+
+### Added
+
+- `cccc-detect-workflow.py` — Workflow detection script that analyzes planning docs to find active milestones.
+- Workflow state rehydration: loop-start can recover `current_milestone_id` from `milestone-backlog.md`, `roadmap.md`, `current-state.md`, or `open-questions.md`.
+- State mismatch diagnostics in loop-status: detects planning docs without `current_milestone_id` and shows candidate milestones.
+- State repair mode in resume: when state.json is missing `current_milestone_id` but planning docs exist, offers milestone selection.
+- State fields: `last_state_repaired_at`, `last_state_repair_reason`.
+
+### Changed
+
+- Loop-start workflow detection now uses `cccc-detect-workflow.py` instead of hardcoded bash logic.
+- Loop-start no longer incorrectly prompts for a new task when planning docs already exist.
+- Loop-start outputs state repair info when milestone is recovered from docs.
+- Loop-status shows state mismatch warning and candidate milestone when applicable.
+- Resume supports state repair with `--strategy use-detected` for non-interactive milestone recovery.
+
 ## 0.1.9 - 2026-05-15
 
 ### Added

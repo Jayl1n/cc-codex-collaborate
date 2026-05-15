@@ -1,6 +1,6 @@
 {
   "skill_name": "cc-codex-collaborate",
-  "skill_version": "0.1.9",
+  "skill_version": "0.1.10",
   "workspace": "docs/cccc",
   "workspace_schema_version": 1,
   "last_migration_at": null,
@@ -28,6 +28,8 @@
   "resume_strategy": null,
   "last_resumed_at": null,
   "last_human_decision": null,
+  "last_state_repaired_at": null,
+  "last_state_repair_reason": null,
   "stop_hook_continuations": 0,
   "review_round_current": 0,
   "fix_attempts_current": 0,

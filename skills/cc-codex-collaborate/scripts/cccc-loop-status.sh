@@ -177,25 +177,64 @@ fi
 
 echo ""
 
-if [[ -f "$STATE" ]]; then
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CURRENT_MILESTONE_ID="$(json_value "$STATE" '.current_milestone_id' '')"
+HAS_PLANNING_DOCS="false"
+if [[ -f docs/cccc/roadmap.md || -f docs/cccc/milestone-backlog.md || -f docs/cccc/current-state.md ]]; then
+  HAS_PLANNING_DOCS="$(python3 "$SCRIPT_DIR/cccc-detect-workflow.py" has-planning-docs 2>/dev/null || echo "false")"
+fi
+
+# State mismatch detection
+if [[ -f "$STATE" ]] && [[ "$HAS_PLANNING_DOCS" == "true" ]]; then
+  if [[ -z "$CURRENT_MILESTONE_ID" || "$CURRENT_MILESTONE_ID" == "null" || "$CURRENT_MILESTONE_ID" == "none" ]]; then
+    echo "State mismatch:"
+    echo "  Planning docs exist (roadmap/backlog/current-state)"
+    echo "  state.current_milestone_id is missing"
+    CANDIDATE="$(python3 "$SCRIPT_DIR/cccc-detect-workflow.py" find-milestone 2>/dev/null || echo "null")"
+    if [[ "$CANDIDATE" != "null" && "$CANDIDATE" != "" ]]; then
+      CANDIDATE_ID="$(echo "$CANDIDATE" | jq -r '.id // empty')"
+      CANDIDATE_TITLE="$(echo "$CANDIDATE" | jq -r '.title // empty')"
+      if [[ -n "$CANDIDATE_ID" ]]; then
+        echo "  Candidate milestone: $CANDIDATE_ID ${CANDIDATE_TITLE:+— $CANDIDATE_TITLE}"
+      fi
+    fi
+    echo ""
+    echo "Next: /cc-codex-collaborate resume"
+  else
+    # Normal resume guidance with milestone
+    RESUME_STATUS="$(json_value "$STATE" '.status' 'unknown')"
+    case "$RESUME_STATUS" in
+      PAUSED_FOR_HUMAN|NEEDS_HUMAN)
+        echo "Next: /cc-codex-collaborate resume"
+        ;;
+      PAUSED_FOR_CODEX)
+        echo "Next: configure Codex locally, then /cc-codex-collaborate resume"
+        ;;
+      PAUSED_FOR_SYSTEM)
+        echo "Next: inspect docs/cccc/logs/stop-failure-*.json, then /cc-codex-collaborate resume"
+        ;;
+      NEEDS_SECRET|SENSITIVE_OPERATION|UNSAFE|FAIL_UNCLEAR|REVIEW_THRESHOLD_EXCEEDED)
+        echo "Next: /cc-codex-collaborate resume"
+        ;;
+      DONE|COMPLETED|FAILED)
+        echo "Next: /cc-codex-collaborate \"your task\""
+        ;;
+      *)
+        if [[ "$loop_enabled_in_config" == "True" ]]; then
+          echo "Next: /cc-codex-collaborate resume or wait for Stop hook continuation"
+        else
+          echo "Next: /cc-codex-collaborate \"your task\""
+        fi
+        ;;
+    esac
+  fi
+elif [[ -f "$STATE" ]]; then
   RESUME_STATUS="$(json_value "$STATE" '.status' 'unknown')"
   case "$RESUME_STATUS" in
-    PAUSED_FOR_HUMAN|NEEDS_HUMAN)
-      echo "Next: /cc-codex-collaborate resume"
-      ;;
-    PAUSED_FOR_CODEX)
-      echo "Next: configure Codex locally, then /cc-codex-collaborate resume"
-      ;;
-    PAUSED_FOR_SYSTEM)
-      echo "Next: inspect docs/cccc/logs/stop-failure-*.json, then /cc-codex-collaborate resume"
-      ;;
-    NEEDS_SECRET|SENSITIVE_OPERATION|UNSAFE|FAIL_UNCLEAR|REVIEW_THRESHOLD_EXCEEDED)
+    PAUSED_FOR_HUMAN|NEEDS_HUMAN|PAUSED_FOR_CODEX|PAUSED_FOR_SYSTEM|NEEDS_SECRET|SENSITIVE_OPERATION|UNSAFE|FAIL_UNCLEAR|REVIEW_THRESHOLD_EXCEEDED)
       echo "Next: /cc-codex-collaborate resume"
       ;;
     DONE|COMPLETED|FAILED)
-      echo "Next: /cc-codex-collaborate \"your task\""
-      ;;
-    NOT_INITIALIZED|SETUP_COMPLETE)
       echo "Next: /cc-codex-collaborate \"your task\""
       ;;
     *)

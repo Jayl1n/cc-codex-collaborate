@@ -1,3 +1,4 @@
 docs/cccc/runtime/
 docs/cccc/logs/
 .DS_Store
+__pycache__/

@@ -51,6 +51,78 @@ is_resumable() {
 
 if ! is_resumable "$STATUS"; then
   echo "Current status: $STATUS"
+
+  # State repair mode: status is active-ish but missing current_milestone_id
+  if [[ -z "$CURRENT_MILESTONE" || "$CURRENT_MILESTONE" == "null" ]]; then
+    HAS_PLANNING="$(python3 "$SCRIPT_DIR/cccc-detect-workflow.py" has-planning-docs 2>/dev/null || echo "false")"
+    if [[ "$HAS_PLANNING" == "true" ]]; then
+      echo ""
+      echo "## State repair mode"
+      echo ""
+      echo "Planning docs exist but state.json is missing current_milestone_id."
+      echo ""
+
+      CANDIDATE="$(python3 "$SCRIPT_DIR/cccc-detect-workflow.py" find-milestone 2>/dev/null || echo "null")"
+      if [[ "$CANDIDATE" != "null" && "$CANDIDATE" != "" ]]; then
+        CANDIDATE_ID="$(echo "$CANDIDATE" | jq -r '.id // empty')"
+        CANDIDATE_TITLE="$(echo "$CANDIDATE" | jq -r '.title // empty')"
+        if [[ -n "$CANDIDATE_ID" ]]; then
+          echo "Detected candidate milestone: $CANDIDATE_ID ${CANDIDATE_TITLE:+— $CANDIDATE_TITLE}"
+        fi
+      fi
+
+      echo ""
+      echo "Options:"
+      echo "  A. Continue with detected milestone"
+      echo "  B. Choose next milestone from roadmap"
+      echo "  C. Enter milestone ID manually"
+      echo "  D. Re-plan from scratch"
+      echo "  E. Exit"
+      echo ""
+
+      # Non-interactive repair
+      if [[ -n "$STRATEGY" ]]; then
+        case "$STRATEGY" in
+          use-detected|recommended)
+            if [[ -n "$CANDIDATE_ID" ]]; then
+              python3 - "$CANDIDATE_ID" "$STATUS" <<'PYREP'
+import json, sys
+from pathlib import Path
+from datetime import datetime, timezone
+mid = sys.argv[1]
+old_status = sys.argv[2]
+state = json.loads(Path("docs/cccc/state.json").read_text())
+state["current_milestone_id"] = mid
+state["status"] = "READY_TO_CONTINUE"
+state["previous_status"] = old_status
+state["resume_reason"] = f"State repair: set current_milestone_id to {mid}"
+state["resume_strategy"] = "state-repair"
+state["stop_hook_continuations"] = 0
+state["pause_reason"] = None
+state["last_resumed_at"] = datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
+state["last_state_repaired_at"] = state["last_resumed_at"]
+state["last_state_repair_reason"] = f"Recovered milestone {mid} from planning docs"
+Path("docs/cccc/state.json").write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n")
+print(f"State repaired: current_milestone_id = {mid}")
+print("Status: READY_TO_CONTINUE")
+print("Do NOT skip Codex gates. Do NOT mark milestones as passed without review.")
+PYREP
+            else
+              echo "No candidate milestone found. Cannot repair automatically."
+            fi
+            ;;
+          *)
+            echo "Unknown strategy: $STRATEGY"
+            echo "Claude Code must ask the user with brainstorm-style options."
+            ;;
+        esac
+      else
+        echo "Claude Code must ask the user to select a milestone before proceeding."
+      fi
+      exit 0
+    fi
+  fi
+
   echo "This status is not resumable via /cc-codex-collaborate resume."
   if [[ "$STATUS" == "DONE" || "$STATUS" == "COMPLETED" ]]; then
     echo "The workflow is already complete. Start a new task with /cc-codex-collaborate \"your task\"."

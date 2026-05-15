@@ -1,6 +1,6 @@
 <!-- generated-by: cc-codex-collaborate -->
 <!-- generated-file: true -->
-<!-- template-version: 0.1.9 -->
+<!-- template-version: 0.1.10 -->
 
 ---
 description: Enable cc-codex-collaborate stop-hook automation and continue an active workflow if one exists.

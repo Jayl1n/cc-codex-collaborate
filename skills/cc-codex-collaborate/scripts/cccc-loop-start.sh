@@ -98,50 +98,12 @@ echo ""
 
 # ── Step 2: Check if an active workflow can be continued ──
 
-WORKFLOW_ACTION="needs_task"
-WORKFLOW_REASON="No current milestone or pending backlog found."
+DETECT_RESULT="$(python3 "$SCRIPT_DIR/cccc-detect-workflow.py" detect 2>/dev/null || echo '{}')"
 
-if [[ -f "$STATE" && -f "$CONFIG" ]]; then
-  STATUS="$(jq -r '.status // "UNKNOWN"' "$STATE")"
-  PAUSE_REASON="$(jq -r '.pause_reason // empty' "$STATE")"
-  CURRENT_MILESTONE="$(jq -r '.current_milestone_id // empty' "$STATE")"
-
-  # Terminal states — workflow is done
-  case "$STATUS" in
-    DONE|COMPLETED|FAILED)
-      WORKFLOW_ACTION="done"
-      WORKFLOW_REASON="Current workflow status is $STATUS."
-      ;;
-  esac
-
-  # Needs resume — paused with human/codex/safety reasons
-  if [[ "$WORKFLOW_ACTION" == "needs_task" ]]; then
-    case "$STATUS" in
-      PAUSED_FOR_HUMAN|NEEDS_HUMAN|PAUSED_FOR_CODEX|PAUSED_FOR_SYSTEM|NEEDS_SECRET|SENSITIVE_OPERATION|UNSAFE|FAIL_UNCLEAR|REVIEW_THRESHOLD_EXCEEDED)
-        WORKFLOW_ACTION="needs_resume"
-        WORKFLOW_REASON="Current workflow is paused at $STATUS. Run /cc-codex-collaborate resume to continue."
-        ;;
-    esac
-  fi
-
-  # Active and ready — can continue now
-  if [[ "$WORKFLOW_ACTION" == "needs_task" ]]; then
-    case "$STATUS" in
-      NOT_INITIALIZED|SETUP_COMPLETE|INIT|DISCOVER_EXISTING_PROJECT|BUILD_PROJECT_CONTEXT|CLAUDE_PLANNING_REVIEW|CODEX_ADVERSARIAL_PLAN_REVIEW|IMPLEMENT_MILESTONE|CLAUDE_SELF_REVIEW|CODEX_MILESTONE_REVIEW|PLAN_NEXT_MILESTONE|READY_TO_CONTINUE)
-        if [[ -n "$CURRENT_MILESTONE" && "$CURRENT_MILESTONE" != "null" ]]; then
-          WORKFLOW_ACTION="continue_now"
-          WORKFLOW_REASON="Active milestone $CURRENT_MILESTONE found and status is $STATUS."
-        elif [[ -f docs/cccc/roadmap.md || -f docs/cccc/milestone-backlog.md ]]; then
-          WORKFLOW_ACTION="continue_now"
-          WORKFLOW_REASON="Roadmap/backlog exists and status is $STATUS."
-        else
-          WORKFLOW_ACTION="needs_task"
-          WORKFLOW_REASON="No current milestone or pending backlog found."
-        fi
-        ;;
-    esac
-  fi
-fi
+WORKFLOW_ACTION="$(echo "$DETECT_RESULT" | jq -r '.action // "needs_task"')"
+WORKFLOW_REASON="$(echo "$DETECT_RESULT" | jq -r '.reason // "No task, roadmap, or milestone backlog found."')"
+WORKFLOW_MILESTONE="$(echo "$DETECT_RESULT" | jq -r '.milestone_id // empty')"
+WORKFLOW_REPAIRED="$(echo "$DETECT_RESULT" | jq -r '.state_repaired // false')"
 
 # ── Step 3: Output machine-readable markers and human guidance ──
 
@@ -153,16 +115,19 @@ echo ""
 case "$WORKFLOW_ACTION" in
   continue_now)
     echo "Loop automation is enabled and an active workflow was found."
+    if [[ "$WORKFLOW_REPAIRED" == "true" && -n "$WORKFLOW_MILESTONE" ]]; then
+      echo "State repaired: current_milestone_id set to $WORKFLOW_MILESTONE."
+    fi
     echo "Continue the cc-codex-collaborate state machine now."
     echo "Do not stop after enabling hooks."
     echo "Read docs/cccc/config.json and docs/cccc/state.json, then execute the next safe step."
     ;;
   needs_resume)
-    echo "Current workflow is paused and requires human input before continuing."
+    echo "Existing workflow found but requires resume."
     echo "Run: /cc-codex-collaborate resume"
     ;;
   needs_task)
-    echo "No active workflow found. Start a new task:"
+    echo "No workflow found. Start a new task:"
     echo "  /cc-codex-collaborate \"your task description\""
     ;;
   done)
