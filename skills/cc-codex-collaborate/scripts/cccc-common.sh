@@ -57,6 +57,32 @@ cccc_require_cmd() {
   fi
 }
 
+cccc_check_deps() {
+  local missing=()
+  local optional_missing=()
+  for cmd in git python3; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+      missing+=("$cmd")
+    fi
+  done
+  if ! command -v jq >/dev/null 2>&1; then
+    optional_missing+=("jq (install: brew install jq / apt install jq)")
+  fi
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    echo "ERROR: Required commands not found: ${missing[*]}" >&2
+    echo "Please install them before continuing." >&2
+    return 1
+  fi
+  if [[ ${#optional_missing[@]} -gt 0 ]]; then
+    echo "WARN: Optional commands not found:" >&2
+    for m in "${optional_missing[@]}"; do
+      echo "  - $m" >&2
+    done
+    echo "Some features may not work without them." >&2
+  fi
+  return 0
+}
+
 cccc_init_dirs() {
   mkdir -p docs/cccc/{reviews/plan,reviews/milestones,logs,runtime,templates,backups}
   mkdir -p docs/cccc/{inbox/raw-notes,inbox/gpt-discussions,inbox/imported-docs}

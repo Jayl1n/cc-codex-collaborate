@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """CCCC sync-docs — detect and sync docs/cccc document changes with user interaction."""
+import argparse
 import json
 import sys
 import os
@@ -151,14 +152,17 @@ def write_decision_log(decision: str, changes: list[dict], summary: str):
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Detect and sync docs/cccc document changes with user interaction",
+    )
+    parser.add_argument("--strategy", default=None,
+                        help="Sync strategy to apply (adopt_and_replan, context_only, pause, ignore, view_diff)")
+    args = parser.parse_args()
+    strategy = args.strategy
+
     if not WORKSPACE.exists():
         print("ERROR: docs/cccc does not exist. Run /cc-codex-collaborate setup first.", file=sys.stderr)
         return 1
-
-    strategy = None
-    for arg in sys.argv[1:]:
-        if arg.startswith("--strategy="):
-            strategy = arg.split("=", 1)[1]
 
     index = read_doc_index()
     is_first_sync = not index.get("documents")

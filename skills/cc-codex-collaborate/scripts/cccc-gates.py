@@ -276,6 +276,10 @@ def check_curation_gate(st: dict):
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Show plan/milestone/final/safety gate status")
+    parser.parse_args()
+
     cfg = read_json(WORKSPACE / "config.json")
     st = read_json(WORKSPACE / "state.json")
 

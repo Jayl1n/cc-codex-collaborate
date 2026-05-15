@@ -14,6 +14,10 @@ from cccc_docs import (
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Detect docs/cccc document changes without modifying state")
+    parser.parse_args()
+
     if not WORKSPACE.exists():
         print("ERROR: docs/cccc does not exist. Run /cc-codex-collaborate setup first.", file=sys.stderr)
         return 1

@@ -536,6 +536,10 @@ def check_curation():
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Diagnose installation, config, hooks, Codex, gates, and context health")
+    parser.parse_args()
+
     print("cc-codex-collaborate doctor")
     print()
 

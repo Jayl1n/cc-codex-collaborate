@@ -1,6 +1,6 @@
 ---
 name: cc-codex-collaborate
-version: 0.1.20
+version: 0.1.21
 description: Coordinate Claude Code and Codex in a milestone-based collaboration loop. Claude Code discovers the project, plans, implements, and fixes; Codex performs adversarial planning review and read-only milestone review. Working documents are stored under docs/cccc.
 argument-hint: "[task description]"
 ---

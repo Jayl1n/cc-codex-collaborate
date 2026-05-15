@@ -147,6 +147,10 @@ def parse_state_history() -> list[Event]:
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Show recent state machine events from logs, reviews, and docs")
+    parser.parse_args()
+
     print("CCCC Trace — 最近状态机事件")
     print()
 

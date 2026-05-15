@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """CCCC review fingerprint — compute review cache fingerprint."""
+import argparse
 import hashlib
 import json
 import os
@@ -80,23 +81,34 @@ def record_cache(fingerprint: str, review_file: str, status: str, state_path: Pa
 
 
 def main():
-    args = sys.argv[1:]
-    if not args or args[0] == "--help":
-        print("Usage: cccc-review-fingerprint.py compute [--milestone=ID] [--since=COMMIT]")
-        print("       cccc-review-fingerprint.py check-cache --fingerprint=FP")
-        print("       cccc-review-fingerprint.py record-cache --fingerprint=FP --review-file=PATH --status=STATUS")
+    parser = argparse.ArgumentParser(
+        description="Compute review fingerprint from milestone diff",
+    )
+    subparsers = parser.add_subparsers(dest="command")
+
+    p_compute = subparsers.add_parser("compute", help="Compute fingerprint for current milestone diff")
+    p_compute.add_argument("--milestone", default=None, help="Milestone ID")
+    p_compute.add_argument("--since", default=None, help="Git commit to diff since")
+
+    p_check = subparsers.add_parser("check-cache", help="Check if fingerprint exists in cache")
+    p_check.add_argument("--fingerprint", required=True, help="Fingerprint to check")
+
+    p_record = subparsers.add_parser("record-cache", help="Record a fingerprint in cache")
+    p_record.add_argument("--fingerprint", required=True, help="Fingerprint to record")
+    p_record.add_argument("--review-file", required=True, help="Path to review file")
+    p_record.add_argument("--status", required=True, help="Review status")
+
+    args = parser.parse_args()
+
+    if not args.command:
+        parser.print_help()
         return 0
 
-    cmd = args[0]
+    cmd = args.command
 
     if cmd == "compute":
-        milestone_id = None
-        since = None
-        for a in args[1:]:
-            if a.startswith("--milestone="):
-                milestone_id = a.split("=", 1)[1]
-            elif a.startswith("--since="):
-                since = a.split("=", 1)[1]
+        milestone_id = args.milestone
+        since = args.since
 
         diff = get_diff_content(since)
 
@@ -120,10 +132,7 @@ def main():
         return 0
 
     elif cmd == "check-cache":
-        fp = ""
-        for a in args[1:]:
-            if a.startswith("--fingerprint="):
-                fp = a.split("=", 1)[1]
+        fp = args.fingerprint
 
         state_path = WORKSPACE / "state.json"
         state = json.loads(state_path.read_text(encoding="utf-8"))
@@ -132,16 +141,9 @@ def main():
         return 0
 
     elif cmd == "record-cache":
-        fp = ""
-        review_file = ""
-        status = ""
-        for a in args[1:]:
-            if a.startswith("--fingerprint="):
-                fp = a.split("=", 1)[1]
-            elif a.startswith("--review-file="):
-                review_file = a.split("=", 1)[1]
-            elif a.startswith("--status="):
-                status = a.split("=", 1)[1]
+        fp = args.fingerprint
+        review_file = args.review_file
+        status = args.status
 
         state_path = WORKSPACE / "state.json"
         record_cache(fp, review_file, status, state_path)

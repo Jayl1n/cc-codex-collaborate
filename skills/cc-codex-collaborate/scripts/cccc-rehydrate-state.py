@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Rehydrate state.json from docs/cccc planning docs, reviews, and git history."""
+import argparse
 import json
 import os
 import re
@@ -271,6 +272,11 @@ def rehydrate(template_path: Path | None = None) -> dict:
 
 
 def main():
+    parser = argparse.ArgumentParser(
+        description="Rehydrate state.json from docs/cccc planning docs, reviews, and git history",
+    )
+    parser.parse_args()
+
     # Resolve skill dir: standard install or dev repo
     skill_dir = None
     # Prefer dev repo layout over installed copy to avoid stale assets.

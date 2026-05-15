@@ -49,6 +49,8 @@ if [[ "$PRESET" == "-h" || "$PRESET" == "--help" ]]; then
   exit 0
 fi
 
+cccc_check_deps || exit 1
+
 cccc_init_dirs
 
 # ── Preset generators ──

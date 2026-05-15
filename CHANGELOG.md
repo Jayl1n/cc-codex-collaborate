@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.21 - 2026-05-15
+
+### Added
+
+- `sync-inbox` now auto-prompts user to continue with `curate-docs` when pending curation items are found.
+- All user-facing Python scripts now support `-h`/`--help` flags via argparse.
+- `cccc_check_deps()` in `cccc-common.sh` auto-detects required (`git`, `python3`) and optional (`jq`) dependencies.
+- Setup wizard (`cccc-setup.sh`) now checks dependencies before proceeding.
+
+### Changed
+
+- 10 Python scripts updated with argparse help support: `cccc-doctor.py`, `cccc-gates.py`, `cccc-trace.py`, `cccc-codex-budget.py`, `cccc-diff-docs.py`, `cccc-sync-docs.py`, `cccc-review-policy.py`, `cccc-rehydrate-state.py`, `cccc-detect-workflow.py`, `cccc-review-fingerprint.py`.
+- Command templates updated to template-version 0.1.21.
+
 ## 0.1.20 - 2026-05-15
 
 ### Fixed

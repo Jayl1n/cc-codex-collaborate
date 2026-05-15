@@ -46,7 +46,7 @@ Parse the first argument:
 - **`review-now`** — Force immediate Codex review. Run `cccc-review-now.sh [current|batch|full]` then follow `===REVIEW_NOW_REQUIRED===` instructions.
 - **`checkpoint`** — Manage Codex-approved checkpoints. Run `cccc-checkpoint.sh [status|record|commit]`.
 - **`ingest-docs`** — Import external docs to inbox. Run `cccc-ingest-docs.sh [paths...]`. Does NOT modify canonical docs.
-- **`sync-inbox`** — Discover inbox document changes. Run `python3 cccc-sync-inbox.py [--json]`. Updates source-index.json only.
+- **`sync-inbox`** — Discover inbox document changes. Run `python3 cccc-sync-inbox.py [--json]`. Updates source-index.json only. **If the output shows pending curation items (>0 new/changed sources), automatically ask the user whether to continue with `/cccc curate-docs` for classification and extraction. Present as a brainstorm-style option.**
 - **`curate-docs`** — Classify and extract engineering content from raw docs. Run `python3 cccc-curate-docs.py [status|report|apply]`. If `SYNC_AWAITING_DECISION=true`, ask the user with brainstorm-style options. Updates canonical docs only after user confirmation.
 - **`distill-project`** — Rebuild project state from all sources. Run `cccc-distill-project.sh`. Must ask user to confirm conflicts. Recommend `/cccc replan` after completion.
 - **`status`** — Run `cccc-status.sh` and summarize.

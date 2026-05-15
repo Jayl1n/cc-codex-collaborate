@@ -19,6 +19,10 @@ def read_json(path: Path) -> dict | None:
 
 
 def main():
+    import argparse
+    parser = argparse.ArgumentParser(description="Show Codex review budget and policy status")
+    parser.parse_args()
+
     cfg = read_json(WORKSPACE / "config.json") or {}
     state = read_json(WORKSPACE / "state.json") or {}
 

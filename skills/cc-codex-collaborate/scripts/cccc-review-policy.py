@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """CCCC review policy — decide review level based on risk, budget, cache, and triggers."""
+import argparse
 import json
 import os
 import subprocess
@@ -67,11 +68,13 @@ def get_milestones_since_last_codex(state: dict) -> int:
 
 
 def main():
-    args = sys.argv[1:]
-    gate = None
-    for a in args:
-        if a.startswith("--gate="):
-            gate = a.split("=", 1)[1]
+    parser = argparse.ArgumentParser(
+        description="Decide Codex review level based on risk, budget, cache, and triggers",
+    )
+    parser.add_argument("--gate", default=None,
+                        help="Review gate type (plan_review, final_review, or milestone)")
+    args = parser.parse_args()
+    gate = args.gate
 
     cfg = read_json(WORKSPACE / "config.json") or {}
     state = read_json(WORKSPACE / "state.json") or {}

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Detect active workflow from planning docs when state.json is incomplete."""
+import argparse
 import json
 import re
 import sys
@@ -283,7 +284,13 @@ def repair_state(milestone_id: str, source: str) -> None:
 
 
 if __name__ == "__main__":
-    action = sys.argv[1] if len(sys.argv) > 1 else "detect"
+    parser = argparse.ArgumentParser(
+        description="Detect active workflow state from planning docs and git history",
+    )
+    parser.add_argument("action", nargs="?", default="detect",
+                        help="Action to perform (detect, find-milestone, has-planning-docs)")
+    args = parser.parse_args()
+    action = args.action
 
     if action == "detect":
         result = detect_workflow()

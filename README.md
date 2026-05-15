@@ -1,7 +1,7 @@
 # CCCC — Claude Code × Codex 协作引擎
 
 <p align="center">
-  <strong>版本</strong> 0.1.20 &nbsp;|&nbsp; <strong>代号</strong> CCCC &nbsp;|&nbsp; <strong>协议</strong> MIT
+  <strong>版本</strong> 0.1.21 &nbsp;|&nbsp; <strong>代号</strong> CCCC &nbsp;|&nbsp; <strong>协议</strong> MIT
 </p>
 
 <p align="center">
