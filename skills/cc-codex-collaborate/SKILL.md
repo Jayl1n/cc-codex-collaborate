@@ -1,6 +1,6 @@
 ---
 name: cc-codex-collaborate
-version: 0.1.13
+version: 0.1.14
 description: Coordinate Claude Code and Codex in a milestone-based collaboration loop. Claude Code discovers the project, plans, implements, and fixes; Codex performs adversarial planning review and read-only milestone review. Working documents are stored under docs/cccc.
 argument-hint: "[task description]"
 ---
@@ -220,6 +220,8 @@ Interpret the first argument after `/cc-codex-collaborate` as a subcommand when 
 If no known subcommand is provided, treat the arguments as the user's coding task. Before doing project discovery or planning, ensure setup has been performed. If `docs/cccc/config.json` is missing, prompt the user to run `/cc-codex-collaborate setup` first.
 
 ## Public commands summary
+
+Short aliases: `/cccc` = `/cc-codex-collaborate`, `/cccc-loop-status` = `/cc-codex-collaborate-loop-status`, `/cccc-loop-start` = `/cc-codex-collaborate-loop-start`, `/cccc-loop-stop` = `/cc-codex-collaborate-loop-stop`. Aliases call the same scripts and follow the same state-machine rules. They are convenience wrappers, not separate implementations.
 
 | Command | Purpose |
 | --- | --- |

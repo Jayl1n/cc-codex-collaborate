@@ -1,7 +1,7 @@
 # CCCC — Claude Code × Codex 协作引擎
 
 <p align="center">
-  <strong>版本</strong> 0.1.13 &nbsp;|&nbsp; <strong>代号</strong> CCCC &nbsp;|&nbsp; <strong>协议</strong> MIT
+  <strong>版本</strong> 0.1.14 &nbsp;|&nbsp; <strong>代号</strong> CCCC &nbsp;|&nbsp; <strong>协议</strong> MIT
 </p>
 
 <p align="center">
@@ -196,50 +196,61 @@ update 会在 `docs/cccc/backups/update-<timestamp>/` 下创建备份。
 
 ## 命令参考
 
+所有命令都有完整形式和短别名两种写法：
+
+| 完整命令 | 短别名 |
+| --- | --- |
+| `/cc-codex-collaborate` | `/cccc` |
+| `/cc-codex-collaborate-loop-status` | `/cccc-loop-status` |
+| `/cc-codex-collaborate-loop-start` | `/cccc-loop-start` |
+| `/cc-codex-collaborate-loop-stop` | `/cccc-loop-stop` |
+
+短别名调用同一个脚本，行为与完整命令完全一致。以下文档统一使用 `/cccc` 简写。
+
 ### 主命令
 
 ```text
-/cc-codex-collaborate <任务描述>    启动完整协作流程
-/cc-codex-collaborate setup         交互式配置向导（首次使用入口）
-/cc-codex-collaborate update        安全迁移工作区（升级后同步）
-/cc-codex-collaborate force-update  强制同步（无视版本号）
-/cc-codex-collaborate resume        恢复暂停的 workflow
-/cc-codex-collaborate reset         重置状态机（从文档重新推断进度）
-/cc-codex-collaborate doctor        诊断安装/配置/hooks/Codex/gates
-/cc-codex-collaborate rebuild-context  重新生成 context-bundle
-/cc-codex-collaborate gates         显示 plan/milestone/final/safety gate 状态
-/cc-codex-collaborate repair        自动修复安全的不一致状态
-/cc-codex-collaborate trace         查看最近状态机事件
-/cc-codex-collaborate dev-smoke     开发者自测
-/cc-codex-collaborate codex-check   检查 Codex CLI 可用性
-/cc-codex-collaborate plan          生成/更新规划
-/cc-codex-collaborate plan-review   触发规划审核
-/cc-codex-collaborate run           运行当前 milestone
-/cc-codex-collaborate review        触发 milestone 审阅
-/cc-codex-collaborate status        查看当前状态
+/cccc <任务描述>       启动完整协作流程
+/cccc setup            交互式配置向导（首次使用入口）
+/cccc update           安全迁移工作区（升级后同步）
+/cccc force-update     强制同步（无视版本号）
+/cccc resume           恢复暂停的 workflow
+/cccc reset            重置状态机（从文档重新推断进度）
+/cccc doctor           诊断安装/配置/hooks/Codex/gates
+/cccc rebuild-context  重新生成 context-bundle
+/cccc gates            显示 plan/milestone/final/safety gate 状态
+/cccc repair           自动修复安全的不一致状态
+/cccc trace            查看最近状态机事件
+/cccc dev-smoke        开发者自测
+/cccc codex-check      检查 Codex CLI 可用性
+/cccc plan             生成/更新规划
+/cccc plan-review      触发规划审核
+/cccc run              运行当前 milestone
+/cccc review           触发 milestone 审阅
+/cccc status           查看当前状态
 ```
 
 ### Loop 自动化命令
 
 | 命令 | 作用 |
 | --- | --- |
-| `/cc-codex-collaborate-loop-status` | 查看 config/state 状态、loop 模式、hooks 配置、resume 建议 |
-| `/cc-codex-collaborate-loop-start` | 启用 Stop-hook 自动续跑，如有活跃 workflow 则立即继续 |
-| `/cc-codex-collaborate-loop-stop` | 禁用 loop 自动化，移除 cccc 的 hook 注册 |
+| `/cccc-loop-status` | 查看 config/state 状态、loop 模式、hooks 配置、resume 建议 |
+| `/cccc-loop-start` | 启用 Stop-hook 自动续跑，如有活跃 workflow 则立即继续 |
+| `/cccc-loop-stop` | 禁用 loop 自动化，移除 cccc 的 hook 注册 |
 
 ### 维护与调试命令
 
 | 命令 | 作用 |
 | --- | --- |
-| `/cc-codex-collaborate force-update` | 无视版本号，强制同步当前 skill 模板到项目工作区 |
-| `/cc-codex-collaborate reset` | 重置状态机运行状态，从 docs/cccc、reviews、git log 重新推断当前进度 |
-| `/cc-codex-collaborate doctor` | 一次性诊断安装、hooks、config/state、Codex、gates、context |
-| `/cc-codex-collaborate rebuild-context` | 重新生成 Codex 使用的 context-bundle |
-| `/cc-codex-collaborate gates` | 显示 plan/milestone/final/safety gate 状态 |
-| `/cc-codex-collaborate repair` | 自动修复安全的不一致状态（备份后修复） |
-| `/cc-codex-collaborate trace` | 查看最近状态机事件 |
-| `/cc-codex-collaborate dev-smoke` | 开发者自测（JSON/shell/Python 校验） |
-| `/cc-codex-collaborate codex-check` | 检查 Codex CLI 可用性 |
+| `/cccc force-update` | 无视版本号，强制同步当前 skill 模板到项目工作区 |
+| `/cccc reset` | 重置状态机运行状态，从 docs/cccc、reviews、git log 重新推断当前进度 |
+| `/cccc doctor` | 一次性诊断安装、hooks、config/state、Codex、gates、context |
+| `/cccc rebuild-context` | 重新生成 Codex 使用的 context-bundle |
+| `/cccc gates` | 显示 plan/milestone/final/safety gate 状态 |
+| `/cccc repair` | 自动修复安全的不一致状态（备份后修复） |
+| `/cccc trace` | 查看最近状态机事件 |
+| `/cccc dev-smoke` | 开发者自测（JSON/shell/Python 校验） |
+| `/cccc codex-check` | 检查 Codex CLI 可用性 |
 
 ## Hook 行为
 

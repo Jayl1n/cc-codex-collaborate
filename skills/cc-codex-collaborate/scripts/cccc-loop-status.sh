@@ -248,3 +248,14 @@ elif [[ -f "$STATE" ]]; then
 else
   echo "Next: /cc-codex-collaborate \"your task\""
 fi
+
+echo ""
+echo "Command aliases:"
+_CMD_DIR="${ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}/.claude/commands"
+for alias_file in cccc.md cccc-loop-status.md cccc-loop-start.md cccc-loop-stop.md; do
+  if [[ -f "$_CMD_DIR/$alias_file" ]]; then
+    echo "  /${alias_file%.md}: installed"
+  else
+    echo "  /${alias_file%.md}: missing"
+  fi
+done

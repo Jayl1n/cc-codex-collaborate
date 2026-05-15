@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.1.14 - 2026-05-15
+
+### Added
+
+- Short slash command aliases: `/cccc`, `/cccc-loop-status`, `/cccc-loop-start`, `/cccc-loop-stop`.
+- Alias command templates with `alias-for` markers for safe update/overwrite.
+- Doctor checks alias commands existence (WARN if missing).
+- Loop-status shows alias installation status.
+
+### Changed
+
+- README.md and README_EN.md use `/cccc` short aliases in command documentation.
+- SKILL.md documents short aliases and their equivalence to full commands.
+- All command template versions bumped to 0.1.14.
+
 ## 0.1.13 - 2026-05-15
 
 ### Added

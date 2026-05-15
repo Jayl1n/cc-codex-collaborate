@@ -212,7 +212,8 @@ def check_commands():
         return
 
     expected = ["cc-codex-collaborate.md", "cc-codex-collaborate-loop-start.md",
-                "cc-codex-collaborate-loop-status.md", "cc-codex-collaborate-loop-stop.md"]
+                "cc-codex-collaborate-loop-status.md", "cc-codex-collaborate-loop-stop.md",
+                "cccc.md", "cccc-loop-start.md", "cccc-loop-status.md", "cccc-loop-stop.md"]
     for name in expected:
         p = cmd_dir / name
         if not p.exists():

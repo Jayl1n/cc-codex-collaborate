@@ -1,11 +1,14 @@
 <!-- generated-by: cc-codex-collaborate -->
 <!-- generated-file: true -->
 <!-- template-version: 0.1.14 -->
+<!-- alias-for: cc-codex-collaborate-loop-stop -->
 
 ---
-description: Disable cc-codex-collaborate stop-hook automation.
+description: "Alias for /cc-codex-collaborate-loop-stop. Disable stop-hook automation."
 argument-hint: ""
 ---
+
+This is a short alias for `/cc-codex-collaborate-loop-stop`.
 
 Disable cc-codex-collaborate loop automation.
 

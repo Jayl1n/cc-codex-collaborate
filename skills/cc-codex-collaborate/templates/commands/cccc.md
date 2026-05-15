@@ -1,13 +1,14 @@
 <!-- generated-by: cc-codex-collaborate -->
 <!-- generated-file: true -->
 <!-- template-version: 0.1.14 -->
+<!-- alias-for: cc-codex-collaborate -->
 
 ---
-description: Coordinate Claude Code and Codex in a milestone-based collaboration loop. Use "setup" for first-time configuration, "update" for safe migration, "resume" to continue a paused workflow.
+description: "Alias for /cc-codex-collaborate. Coordinate Claude Code and Codex in a milestone-based collaboration loop."
 argument-hint: "[task description | setup | update | force-update | resume | reset | doctor | rebuild-context | gates | repair | trace | dev-smoke | codex-check | status | loop-status | loop-start | loop-stop]"
 ---
 
-You are activating the cc-codex-collaborate skill. Follow the instructions in `.claude/skills/cc-codex-collaborate/SKILL.md` exactly.
+This is a short alias for `/cc-codex-collaborate`. Follow the instructions in `.claude/skills/cc-codex-collaborate/SKILL.md` exactly.
 
 ## Subcommand routing
 
@@ -36,15 +37,15 @@ Parse the first argument:
 After running cccc-loop-start.sh, check the CCCC_WORKFLOW_ACTION marker in the output:
 
 - **`continue_now`** — **Do NOT summarize and stop.** You MUST immediately read `docs/cccc/config.json` and `docs/cccc/state.json`, determine the current milestone and status, and execute the next state-machine step right now in this same turn. The stop hook will keep you running, but you must start executing immediately. Your very next action must be reading state and executing state machine steps, not writing a summary.
-- **`needs_resume`** — The workflow is paused. Execute `/cc-codex-collaborate resume` or tell the user to run it.
-- **`needs_task`** — No active workflow. Tell the user to run `/cc-codex-collaborate "task description"`.
+- **`needs_resume`** — The workflow is paused. Execute `/cccc resume` or tell the user to run it.
+- **`needs_task`** — No active workflow. Tell the user to run `/cccc "task description"`.
 - **`done`** — The workflow is already completed. Tell the user to start a new task.
 
 **For `continue_now`: You are NOT done after running the loop-start script. The script output tells you to continue. Continuing means executing state machine steps NOW, not waiting for the stop hook.**
 
 ## Before starting a task
 
-If `docs/cccc/config.json` is missing, prompt the user to run `/cc-codex-collaborate setup` first. Do not proceed without a valid config.
+If `docs/cccc/config.json` is missing, prompt the user to run `/cccc setup` first. Do not proceed without a valid config.
 
 ## Key rules
 
