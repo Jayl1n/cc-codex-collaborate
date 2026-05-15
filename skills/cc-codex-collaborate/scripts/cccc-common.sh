@@ -21,7 +21,28 @@ cccc_config() {
 cccc_skill_dir() {
   local root
   root="$(cccc_repo_root)"
+  # Prefer dev repo layout (skills/) over installed copy (.claude/skills/)
+  # to avoid reading stale templates/hooks/VERSION from an older install.
+  if [[ -f "$root/skills/cc-codex-collaborate/SKILL.md" ]]; then
+    echo "$root/skills/cc-codex-collaborate"
+    return
+  fi
+  if [[ -f "$root/.claude/skills/cc-codex-collaborate/SKILL.md" ]]; then
+    echo "$root/.claude/skills/cc-codex-collaborate"
+    return
+  fi
   echo "$root/.claude/skills/cc-codex-collaborate"
+}
+
+cccc_resolve_script() {
+  local script_name="$1"
+  local skill_dir
+  skill_dir="$(cccc_skill_dir)"
+  if [[ -f "$skill_dir/scripts/$script_name" ]]; then
+    echo "$skill_dir/scripts/$script_name"
+    return 0
+  fi
+  return 1
 }
 
 cccc_now() {

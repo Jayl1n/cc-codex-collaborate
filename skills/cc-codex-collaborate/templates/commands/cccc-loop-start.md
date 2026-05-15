@@ -1,6 +1,6 @@
 <!-- generated-by: cc-codex-collaborate -->
 <!-- generated-file: true -->
-<!-- template-version: 0.1.14 -->
+<!-- template-version: 0.1.20 -->
 <!-- alias-for: cc-codex-collaborate-loop-start -->
 
 ---
@@ -12,11 +12,7 @@ This is a short alias for `/cc-codex-collaborate-loop-start`.
 
 Enable cc-codex-collaborate loop automation.
 
-Execute:
-
-```bash
-.claude/skills/cc-codex-collaborate/scripts/cccc-loop-start.sh
-```
+The skill directory is at `skills/cc-codex-collaborate/` or `.claude/skills/cc-codex-collaborate/` — check which exists, then run `cccc-loop-start.sh` from its `scripts/` subdirectory.
 
 This command:
 1. Installs cccc hook scripts into `.claude/hooks`, registers them in `.claude/settings.json`

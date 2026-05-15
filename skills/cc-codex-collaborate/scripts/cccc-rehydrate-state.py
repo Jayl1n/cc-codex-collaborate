@@ -271,7 +271,19 @@ def rehydrate(template_path: Path | None = None) -> dict:
 
 
 def main():
-    template_path = WORKSPACE.parent.parent / ".claude/skills/cc-codex-collaborate/templates/cccc/state.template.json"
+    # Resolve skill dir: standard install or dev repo
+    skill_dir = None
+    # Prefer dev repo layout over installed copy to avoid stale assets.
+    for candidate in [
+        WORKSPACE.parent.parent / "skills/cc-codex-collaborate",
+        WORKSPACE.parent.parent / ".claude/skills/cc-codex-collaborate",
+    ]:
+        if (candidate / "SKILL.md").exists():
+            skill_dir = candidate
+            break
+    if not skill_dir:
+        skill_dir = WORKSPACE.parent.parent / ".claude/skills/cc-codex-collaborate"
+    template_path = skill_dir / "templates/cccc/state.template.json"
     state = rehydrate(template_path)
 
     # Output as JSON to stdout

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.20 - 2026-05-15
+
+### Fixed
+
+- `cccc_skill_dir()` now auto-detects skill location: checks `skills/cc-codex-collaborate/` (dev repo) before falling back to `.claude/skills/cc-codex-collaborate/` (standard install).
+- All command templates no longer hardcode `.claude/skills/cc-codex-collaborate/scripts/` paths — Claude Code resolves the correct path at runtime.
+- `cccc-doctor.py` SKILL_DIR resolution now checks both locations.
+- `cccc-rehydrate-state.py` template path resolution now checks both locations.
+
+### Changed
+
+- Consolidated `VERSION` file: removed duplicate root `VERSION`, kept only `skills/cc-codex-collaborate/VERSION`.
+- Command templates updated to template-version 0.1.20.
+
 ## 0.1.19 - 2026-05-15
 
 ### Added

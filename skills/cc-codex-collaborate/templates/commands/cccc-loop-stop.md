@@ -1,6 +1,6 @@
 <!-- generated-by: cc-codex-collaborate -->
 <!-- generated-file: true -->
-<!-- template-version: 0.1.14 -->
+<!-- template-version: 0.1.20 -->
 <!-- alias-for: cc-codex-collaborate-loop-stop -->
 
 ---
@@ -12,11 +12,7 @@ This is a short alias for `/cc-codex-collaborate-loop-stop`.
 
 Disable cc-codex-collaborate loop automation.
 
-Execute:
-
-```bash
-.claude/skills/cc-codex-collaborate/scripts/cccc-loop-stop.sh
-```
+The skill directory is at `skills/cc-codex-collaborate/` or `.claude/skills/cc-codex-collaborate/` — check which exists, then run `cccc-loop-stop.sh` from its `scripts/` subdirectory.
 
 This command removes cccc hook registrations from `.claude/settings.json` without deleting unrelated user hooks. It sets `docs/cccc/config.json` `automation.stop_hook_loop_enabled` to `false` and reverts `docs/cccc/config.json` mode to `supervised-auto`.
 

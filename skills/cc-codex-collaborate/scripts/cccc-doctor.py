@@ -8,7 +8,21 @@ import sys
 from pathlib import Path
 
 ROOT = Path(os.environ.get("CLAUDE_PROJECT_DIR", subprocess.getoutput("git rev-parse --show-toplevel 2>/dev/null || pwd")).strip())
-SKILL_DIR = ROOT / ".claude/skills/cc-codex-collaborate"
+
+
+def _find_skill_dir() -> Path:
+    # Prefer dev repo layout over installed copy to avoid stale assets.
+    candidates = [
+        ROOT / "skills/cc-codex-collaborate",
+        ROOT / ".claude/skills/cc-codex-collaborate",
+    ]
+    for d in candidates:
+        if (d / "SKILL.md").exists():
+            return d
+    return ROOT / ".claude/skills/cc-codex-collaborate"
+
+
+SKILL_DIR = _find_skill_dir()
 WORKSPACE = ROOT / "docs/cccc"
 SETTINGS = ROOT / ".claude/settings.json"
 
