@@ -1,124 +1,127 @@
 #!/usr/bin/env bash
+# CCCC Stop Hook — prevents Claude Code from stopping when loop is active.
+# Design inspired by ralph-loop: minimize external deps on the critical path.
 set -euo pipefail
 
 INPUT="$(cat)"
 ROOT="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 
+LOOP_STATE="$ROOT/.claude/cccc-loop.local"
 CONFIG="$ROOT/docs/cccc/config.json"
 STATE="$ROOT/docs/cccc/state.json"
 LOG_DIR="$ROOT/docs/cccc/logs"
-mkdir -p "$LOG_DIR"
 
-# Log stop hook input for debugging
-STAMP="$(date -u +"%Y%m%dT%H%M%SZ")"
-echo "$INPUT" > "$LOG_DIR/stop-$STAMP.json"
-
-if ! command -v jq >/dev/null 2>&1; then
-  echo "[cccc-stop] EXIT: jq not available" >&2
+# ── Guard 1: Loop state file must exist ──
+# This file is created by loop-start and removed by loop-stop.
+# If it doesn't exist, there's no active loop — allow stop.
+if [[ ! -f "$LOOP_STATE" ]]; then
   exit 0
 fi
 
-# Avoid infinite recursion inside the same Stop hook chain.
-# The main skill must run its own internal state-machine loop.
-STOP_HOOK_ACTIVE="$(echo "$INPUT" | jq -r '.stop_hook_active // false' 2>/dev/null || echo false)"
+# ── Guard 2: Session isolation ──
+# Prevents blocking in sessions that didn't start the loop.
+LOOP_SESSION="$(grep '^session_id:' "$LOOP_STATE" 2>/dev/null | sed 's/session_id: *//' || true)"
+if [[ -n "$LOOP_SESSION" ]]; then
+  HOOK_SESSION="$(echo "$INPUT" | python3 -c "import json,sys; print(json.load(sys.stdin).get('session_id',''))" 2>/dev/null || true)"
+  if [[ "$LOOP_SESSION" != "$HOOK_SESSION" ]]; then
+    exit 0
+  fi
+fi
 
-if [[ ! -f "$CONFIG" || ! -f "$STATE" ]]; then
-  echo "[cccc-stop] EXIT: config.json or state.json not found" >&2
+# ── Guard 3: Continuation budget from local file (no JSON parsing) ──
+CONTINUATIONS="$(grep '^continuations:' "$LOOP_STATE" 2>/dev/null | sed 's/continuations: *//' || echo '0')"
+MAX_CONTINUATIONS="$(grep '^max_continuations:' "$LOOP_STATE" 2>/dev/null | sed 's/max_continuations: *//' || echo '10')"
+
+if ! [[ "$CONTINUATIONS" =~ ^[0-9]+$ ]]; then CONTINUATIONS=0; fi
+if ! [[ "$MAX_CONTINUATIONS" =~ ^[0-9]+$ ]]; then MAX_CONTINUATIONS=10; fi
+
+if [[ "$CONTINUATIONS" -ge "$MAX_CONTINUATIONS" ]]; then
+  rm -f "$LOOP_STATE"
   exit 0
 fi
 
-# ── Read from config.json (project-level configuration) ──
+# ── Guard 4: Read config + state in a single python3 call ──
+# This replaces 6 separate jq calls with one robust call.
+# Output format: mode|loop_enabled|status|pause_reason|milestone
+READ_RESULT="$(python3 - "$CONFIG" "$STATE" <<'PY' 2>/dev/null || echo "supervised-auto|false|UNKNOWN||"
+import json, sys
+def read_json(path):
+    try:
+        return json.loads(open(path).read())
+    except Exception:
+        return {}
+cfg = read_json(sys.argv[1])
+st = read_json(sys.argv[2])
+mode = cfg.get("mode", "supervised-auto")
+loop_enabled = str(cfg.get("automation", {}).get("stop_hook_loop_enabled", False)).lower()
+status = st.get("status", "UNKNOWN")
+pause_reason = st.get("pause_reason") or ""
+milestone = st.get("current_milestone_id") or ""
+print(f"{mode}|{loop_enabled}|{status}|{pause_reason}|{milestone}")
+PY
+)"
 
-LOOP_ENABLED="$(jq -r '.automation.stop_hook_loop_enabled // false' "$CONFIG")"
-MODE="$(jq -r '.mode // "supervised-auto"' "$CONFIG")"
-MAX_CONTINUATIONS="$(jq -r '.automation.max_stop_hook_continuations // 10' "$CONFIG")"
+IFS='|' read -r MODE LOOP_ENABLED STATUS PAUSE_REASON CURRENT_MILESTONE <<< "$READ_RESULT"
 
-# ── Read from state.json (runtime state only) ──
-
-STATUS="$(jq -r '.status // "UNKNOWN"' "$STATE")"
-CONTINUATIONS="$(jq -r '.stop_hook_continuations // 0' "$STATE")"
-PAUSE_REASON="$(jq -r '.pause_reason // empty' "$STATE")"
-CURRENT_MILESTONE="$(jq -r '.current_milestone_id // empty' "$STATE")"
-
-# ── Guard conditions ──
-
+# ── Guard 5: Loop must be enabled and mode must be full-auto-safe ──
 if [[ "$LOOP_ENABLED" != "true" ]]; then
-  echo "[cccc-stop] EXIT: loop not enabled (automation.stop_hook_loop_enabled = false)" >&2
   exit 0
 fi
-
 if [[ "$MODE" != "full-auto-safe" ]]; then
-  echo "[cccc-stop] EXIT: mode is '$MODE' (not full-auto-safe)" >&2
   exit 0
 fi
 
+# ── Guard 6: Terminal/pause statuses ──
 case "$STATUS" in
   DONE|COMPLETED|FAILED|PAUSED_FOR_HUMAN|NEEDS_HUMAN|NEEDS_SECRET|SENSITIVE_OPERATION|UNSAFE|PAUSED_FOR_SYSTEM|PAUSED_FOR_CODEX)
-    echo "[cccc-stop] EXIT: terminal/pause status = $STATUS" >&2
     exit 0
     ;;
 esac
 
 if [[ -n "$PAUSE_REASON" && "$PAUSE_REASON" != "null" ]]; then
-  echo "[cccc-stop] EXIT: pause_reason = '$PAUSE_REASON'" >&2
   exit 0
 fi
 
-if [[ "$STOP_HOOK_ACTIVE" == "true" ]]; then
-  echo "[cccc-stop] EXIT: recursion guard (stop_hook_active = true)" >&2
-  exit 0
-fi
-
-if [[ "$CONTINUATIONS" -ge "$MAX_CONTINUATIONS" ]]; then
-  echo "[cccc-stop] EXIT: continuation budget exhausted ($CONTINUATIONS >= $MAX_CONTINUATIONS)" >&2
-  exit 0
-fi
-
-# Prevent empty spin: SETUP_COMPLETE with no milestone and no backlog
-if [[ "$STATUS" == "SETUP_COMPLETE" ]]; then
-  HAS_MILESTONE="no"
-  if [[ -n "$CURRENT_MILESTONE" && "$CURRENT_MILESTONE" != "null" ]]; then
-    HAS_MILESTONE="yes"
-  fi
-  HAS_BACKLOG="no"
-  if [[ -f "$ROOT/docs/cccc/roadmap.md" || -f "$ROOT/docs/cccc/milestone-backlog.md" ]]; then
-    HAS_BACKLOG="yes"
-  fi
-  if [[ "$HAS_MILESTONE" == "no" && "$HAS_BACKLOG" == "no" ]]; then
-    echo "[cccc-stop] EXIT: SETUP_COMPLETE with no milestone or backlog (would empty-spin)" >&2
-    exit 0
+# ── Guard 7: Prevent empty spin ──
+if [[ "$STATUS" == "SETUP_COMPLETE" || "$STATUS" == "ERROR" ]]; then
+  if [[ -z "$CURRENT_MILESTONE" || "$CURRENT_MILESTONE" == "null" ]]; then
+    if [[ ! -f "$ROOT/docs/cccc/roadmap.md" && ! -f "$ROOT/docs/cccc/milestone-backlog.md" ]]; then
+      exit 0
+    fi
   fi
 fi
 
-# ── Increment continuation counter ──
+# ── Increment continuation counter (atomic via temp file) ──
+NEXT_CONTINUATIONS=$((CONTINUATIONS + 1))
+TEMP_FILE="${LOOP_STATE}.tmp.$$"
+sed "s/^continuations:.*/continuations: $NEXT_CONTINUATIONS/" "$LOOP_STATE" > "$TEMP_FILE"
+mv "$TEMP_FILE" "$LOOP_STATE"
 
-python3 "$ROOT/.claude/skills/cc-codex-collaborate/scripts/cccc-update-state.py" \
-  --set "stop_hook_continuations=$((CONTINUATIONS + 1))" \
-  >/dev/null 2>&1 || true
+# Also update state.json for compatibility (best-effort)
+python3 - "$STATE" "$NEXT_CONTINUATIONS" <<'PY' >/dev/null 2>&1 || true
+import json, sys
+try:
+    p = sys.argv[1]
+    d = json.loads(open(p).read())
+    d["stop_hook_continuations"] = int(sys.argv[2])
+    open(p, "w").write(json.dumps(d, ensure_ascii=False, indent=2) + "\n")
+except Exception:
+    pass
+PY
 
-# ── Block the stop and instruct Claude to continue ──
+# ── Log for debugging (best-effort) ──
+mkdir -p "$LOG_DIR" 2>/dev/null || true
+STAMP="$(date -u +"%Y%m%dT%H%M%SZ" 2>/dev/null || echo "unknown")"
+echo "$INPUT" > "$LOG_DIR/stop-$STAMP.json" 2>/dev/null || true
 
-echo "[cccc-stop] BLOCK: continuing loop (status=$STATUS, milestone=$CURRENT_MILESTONE, continuations=$((CONTINUATIONS + 1))/$MAX_CONTINUATIONS)" >&2
+# ── Block the stop ──
+# Prefer jq for JSON output; fall back to python3 if jq unavailable.
+REASON="Continue the cc-codex-collaborate state machine. The stop-hook only prevents premature stopping. Execute multiple state-machine steps per continuation. Current status: $STATUS. Current milestone: ${CURRENT_MILESTONE:-none}. Continuation budget: $NEXT_CONTINUATIONS/$MAX_CONTINUATIONS. Continue until reaching: DONE, COMPLETED, FAILED, PAUSED_FOR_HUMAN, NEEDS_HUMAN, NEEDS_SECRET, SENSITIVE_OPERATION, UNSAFE, PAUSED_FOR_SYSTEM, PAUSED_FOR_CODEX, or budget exhausted. Never bypass human/secret/production/wallet/money/destructive pause conditions."
 
-jq -n \
-  --arg status "$STATUS" \
-  --arg milestone "$CURRENT_MILESTONE" \
-  --argjson next_continuations "$((CONTINUATIONS + 1))" \
-  --argjson max_continuations "$MAX_CONTINUATIONS" \
-  '{
-    decision: "block",
-    reason: (
-      "Continue the cc-codex-collaborate state machine. " +
-      "The stop-hook is NOT a background worker — it only prevents Claude Code from stopping prematurely. " +
-      "You must execute multiple state-machine steps within this continuation. " +
-      "Do not stop after a single small step. " +
-      "Loop mode is enabled in docs/cccc/config.json (automation.stop_hook_loop_enabled = true, mode = full-auto-safe). " +
-      "Current status: " + $status + ". " +
-      "Current milestone: " + ($milestone // "") + ". " +
-      "Stop-hook continuation budget: " + ($next_continuations|tostring) + "/" + ($max_continuations|tostring) + ". " +
-      "Continue executing safe state-machine steps until one of these conditions is reached: DONE, COMPLETED, FAILED, PAUSED_FOR_HUMAN, NEEDS_HUMAN, NEEDS_SECRET, SENSITIVE_OPERATION, UNSAFE, PAUSED_FOR_SYSTEM, PAUSED_FOR_CODEX, Codex review threshold exceeded, or continuation budget exhausted. " +
-      "Do not bypass human-intervention, secret, production, wallet, real-money, destructive-operation, or threshold pause conditions."
-    )
-  }'
+if command -v jq >/dev/null 2>&1; then
+  jq -n --arg reason "$REASON" '{"decision":"block","reason":$reason}'
+else
+  python3 -c "import json,sys; print(json.dumps({'decision':'block','reason':sys.argv[1]}))" "$REASON"
+fi
 
 exit 0

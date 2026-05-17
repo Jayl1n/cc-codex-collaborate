@@ -7,6 +7,7 @@ ROOT="$(cccc_repo_root)"
 cd "$ROOT"
 SETTINGS=".claude/settings.json"
 STATE="docs/cccc/state.json"
+LOOP_LOCAL=".claude/cccc-loop.local"
 CONFIG="docs/cccc/config.json"
 BACKUP=".claude/settings.json.cccc-backup-$(date -u +%Y%m%dT%H%M%SZ)"
 
@@ -85,3 +86,6 @@ echo "Updated docs/cccc/config.json: automation.stop_hook_loop_enabled = false"
 echo "Updated docs/cccc/state.json: stop_hook_continuations = 0"
 if [[ -f "$BACKUP" ]]; then echo "Backup: $BACKUP"; fi
 echo "Hook script files under .claude/hooks are left in place, but no longer registered."
+
+# Remove loop state file
+rm -f "$LOOP_LOCAL"

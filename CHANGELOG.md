@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.22 - 2026-05-17
+
+### Fixed
+
+- **Stop hook reliability overhaul** — Rewrote `cccc-stop.sh` inspired by ralph-loop's robust design:
+  - Replaced 6 separate `jq` calls with a single `python3` call for all JSON reads
+  - Added lightweight loop state file (`.claude/cccc-loop.local`) for continuation tracking — no jq needed for reading
+  - Continuation counter now updated atomically via temp file + mv
+  - Added session isolation — stops blocking in wrong sessions
+  - Added `python3` fallback for JSON output when `jq` is unavailable
+  - Fixed hardcoded path in continuation counter update
+  - Fixed `None` string being treated as non-empty pause_reason
+
+### Changed
+
+- `loop-start` now creates `.claude/cccc-loop.local` for stop hook state
+- `loop-stop` now removes `.claude/cccc-loop.local`
+- Stop hook no longer depends on `jq` for critical path (reading state)
+
 ## 0.1.21 - 2026-05-15
 
 ### Added

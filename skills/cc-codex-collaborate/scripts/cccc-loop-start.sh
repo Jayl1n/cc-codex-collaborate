@@ -60,6 +60,7 @@ PY
 
 # Update config.json: enable loop, set mode
 if [[ -f "$CONFIG" ]]; then
+  MAX_CONTINUATIONS="$(python3 -c "import json; print(json.load(open('$CONFIG')).get('automation',{}).get('max_stop_hook_continuations',10))" 2>/dev/null || echo 10)"
   python3 - <<'PY'
 import json
 from pathlib import Path
@@ -86,6 +87,15 @@ state.pop('mode', None)
 state.pop('enabled', None)
 state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2) + '\n')
 PY
+
+# ── Create loop state file for stop hook ──
+# This lightweight file lets the stop hook read loop state without jq.
+MAX_CONT="${MAX_CONTINUATIONS:-10}"
+cat > .claude/cccc-loop.local <<LOCAL
+session_id:
+continuations: 0
+max_continuations: $MAX_CONT
+LOCAL
 
 echo "Enabled cc-codex-collaborate loop automation."
 echo "Installed hooks into .claude/hooks and registered them in .claude/settings.json."
